@@ -18,15 +18,17 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)
+    // Use AssertJ for fluent assertions.
+    testImplementation(libs.assertj.core)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 gradlePlugin {
     // Define the plugin
-    val greeting by plugins.creating {
-        id = "org.example.greeting"
-        implementationClass = "org.example.JsonPojoGenPlugin"
+    val jsonPojoGen by plugins.creating {
+        id = "io.github.pgatzka.json-pojo-gen"
+        implementationClass = "io.github.pgatzka.JsonPojoGenPlugin"
     }
 }
 
