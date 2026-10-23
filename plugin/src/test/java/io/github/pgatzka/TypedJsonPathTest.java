@@ -75,4 +75,120 @@ class TypedJsonPathTest {
     void constructor_nullType_throwsNullPointerException() {
         assertThatThrownBy(() -> new TypedJsonPath("$.a", null)).isInstanceOf(NullPointerException.class);
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // nullable-optional-paths (docs/specs/nullable-optional-paths.md)
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("nullable 10: two-argument constructor equals the canonical constructor with both flags false")
+    void twoArgumentConstructor_equalsCanonicalWithFlagsFalse() {
+        TypedJsonPath shortForm = new TypedJsonPath("$.x", JsonType.INTEGER);
+        TypedJsonPath canonical = new TypedJsonPath("$.x", JsonType.INTEGER, false, false);
+
+        assertThat(shortForm).isEqualTo(canonical);
+        assertThat(shortForm.hashCode()).isEqualTo(canonical.hashCode());
+        assertThat(shortForm.nullable()).isFalse();
+        assertThat(shortForm.optional()).isFalse();
+    }
+
+    @Test
+    @DisplayName("nullable 10: unflagged path prints without suffix")
+    void toString_noFlags_hasNoSuffix() {
+        assertThat(new TypedJsonPath("$.x", JsonType.INTEGER).toString()).isEqualTo("$.x: integer");
+        assertThat(new TypedJsonPath("$.x", JsonType.STRING, false, false).toString())
+                .isEqualTo("$.x: string");
+    }
+
+    @Test
+    @DisplayName("nullable 10: nullable path prints ' (nullable)'")
+    void toString_nullable_appendsNullableSuffix() {
+        assertThat(new TypedJsonPath("$.x", JsonType.STRING, true, false).toString())
+                .isEqualTo("$.x: string (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable 10: optional path prints ' (optional)'")
+    void toString_optional_appendsOptionalSuffix() {
+        assertThat(new TypedJsonPath("$.x", JsonType.STRING, false, true).toString())
+                .isEqualTo("$.x: string (optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 10: nullable and optional path prints ' (nullable, optional)'")
+    void toString_nullableAndOptional_appendsBothSuffix() {
+        assertThat(new TypedJsonPath("$.x", JsonType.STRING, true, true).toString())
+                .isEqualTo("$.x: string (nullable, optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 10: suffixes use the type label for every type")
+    void toString_flagsWithEveryType_useLabel() {
+        for (JsonType type : JsonType.values()) {
+            assertThat(new TypedJsonPath("$[*].a", type, true, true).toString())
+                    .isEqualTo("$[*].a: " + type.label() + " (nullable, optional)");
+        }
+    }
+
+    @Test
+    @DisplayName("nullable 10: a null-typed nullable path prints 'null (nullable)'")
+    void toString_nullTypeNullable() {
+        assertThat(new TypedJsonPath("$.none", JsonType.NULL, true, false).toString())
+                .isEqualTo("$.none: null (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable: accessors return all four constructor arguments")
+    void accessors_returnAllFourComponents() {
+        TypedJsonPath typed = new TypedJsonPath("$.items[*].note", JsonType.STRING, true, false);
+
+        assertThat(typed.path()).isEqualTo("$.items[*].note");
+        assertThat(typed.type()).isEqualTo(JsonType.STRING);
+        assertThat(typed.nullable()).isTrue();
+        assertThat(typed.optional()).isFalse();
+
+        TypedJsonPath optional = new TypedJsonPath("$.items[*].price", JsonType.FLOAT, false, true);
+
+        assertThat(optional.nullable()).isFalse();
+        assertThat(optional.optional()).isTrue();
+    }
+
+    @Test
+    @DisplayName("nullable Edge: equality includes the nullable flag")
+    void equals_differentNullable_areNotEqual() {
+        assertThat(new TypedJsonPath("$.x", JsonType.INTEGER, true, false))
+                .isNotEqualTo(new TypedJsonPath("$.x", JsonType.INTEGER));
+    }
+
+    @Test
+    @DisplayName("nullable Edge: equality includes the optional flag")
+    void equals_differentOptional_areNotEqual() {
+        assertThat(new TypedJsonPath("$.x", JsonType.INTEGER, false, true))
+                .isNotEqualTo(new TypedJsonPath("$.x", JsonType.INTEGER));
+        assertThat(new TypedJsonPath("$.x", JsonType.INTEGER, false, true))
+                .isNotEqualTo(new TypedJsonPath("$.x", JsonType.INTEGER, true, false));
+    }
+
+    @Test
+    @DisplayName("nullable Edge: equal components including flags are equal")
+    void equals_equalComponentsWithFlags_areEqual() {
+        TypedJsonPath first = new TypedJsonPath("$.x", JsonType.INTEGER, true, true);
+        TypedJsonPath second = new TypedJsonPath("$.x", JsonType.INTEGER, true, true);
+
+        assertThat(first).isEqualTo(second);
+        assertThat(first.hashCode()).isEqualTo(second.hashCode());
+    }
+
+    @Test
+    @DisplayName("nullable Edge: canonical constructor with null path throws NullPointerException")
+    void canonicalConstructor_nullPath_throwsNullPointerException() {
+        assertThatThrownBy(() -> new TypedJsonPath(null, JsonType.NULL, true, false))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    @DisplayName("nullable Edge: canonical constructor with null type throws NullPointerException")
+    void canonicalConstructor_nullType_throwsNullPointerException() {
+        assertThatThrownBy(() -> new TypedJsonPath("$.a", null, false, false)).isInstanceOf(NullPointerException.class);
+    }
 }

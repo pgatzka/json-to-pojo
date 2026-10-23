@@ -35,7 +35,7 @@ class JsonPojoGenPluginFunctionalTest {
             }
             """;
 
-    /** The 14 paths of the list-json-paths reference, each now logged as {@code <path>: <type>}. */
+    /** The 14 paths of the list-json-paths reference, each logged as {@code <path>: <type>} plus flag suffix. */
     private static final List<String> REFERENCE_LINES = List.of(
             "$.id: integer",
             "$.name: string",
@@ -47,10 +47,10 @@ class JsonPojoGenPluginFunctionalTest {
             "$.items: array",
             "$.items[*]: object",
             "$.items[*].sku: string",
-            "$.items[*].qty: integer",
-            "$.items[*].price: float",
+            "$.items[*].qty: integer (optional)",
+            "$.items[*].price: float (optional)",
             "$.empty: object",
-            "$.none: null");
+            "$.none: null (nullable)");
 
     private static final String TYPED_REFERENCE_DOCUMENT = """
             {
@@ -80,10 +80,48 @@ class JsonPojoGenPluginFunctionalTest {
             "$.items[*]: object",
             "$.items[*].sku: string",
             "$.items[*].qty: float",
-            "$.items[*].note: string",
+            "$.items[*].note: string (nullable)",
             "$.items[*].flag: string",
             "$.empty: object",
-            "$.none: null");
+            "$.none: null (nullable)");
+
+    /** Reference document of docs/specs/nullable-optional-paths.md (criterion 11). */
+    private static final String FLAGGED_REFERENCE_DOCUMENT = """
+            {
+              "id": 1,
+              "name": "widget",
+              "price": 9.5,
+              "active": true,
+              "address": {"city": "Berlin", "zip": "10115"},
+              "tags": ["a", "b"],
+              "items": [
+                {"sku": "s1", "qty": 2, "note": null, "flag": 1},
+                {"sku": "s2", "qty": 2.5, "note": "x", "flag": true, "price": 1.5}
+              ],
+              "empty": {},
+              "none": null
+            }
+            """;
+
+    private static final List<String> FLAGGED_REFERENCE_LINES = List.of(
+            "$.id: integer",
+            "$.name: string",
+            "$.price: float",
+            "$.active: boolean",
+            "$.address: object",
+            "$.address.city: string",
+            "$.address.zip: string",
+            "$.tags: array",
+            "$.tags[*]: string",
+            "$.items: array",
+            "$.items[*]: object",
+            "$.items[*].sku: string",
+            "$.items[*].qty: float",
+            "$.items[*].note: string (nullable)",
+            "$.items[*].flag: string",
+            "$.items[*].price: float (optional)",
+            "$.empty: object",
+            "$.none: null (nullable)");
 
     private static final String CONFIGURED_BUILD_SCRIPT = "plugins {\n"
             + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
@@ -110,7 +148,7 @@ class JsonPojoGenPluginFunctionalTest {
             "$.translations: object",
             "$.translations.*: object",
             "$.translations.*.text: string",
-            "$.translations.*.plural: boolean",
+            "$.translations.*.plural: boolean (optional)",
             "$.items: array",
             "$.items[*]: object",
             "$.items[*].sku: string",
@@ -215,6 +253,22 @@ class JsonPojoGenPluginFunctionalTest {
                 result.getOutput().lines().map(String::strip).toList();
         assertThat(strippedLines).containsSubsequence(TYPED_REFERENCE_LINES);
         assertThat(dollarLines(result)).containsExactlyElementsOf(TYPED_REFERENCE_LINES);
+    }
+
+    @Test
+    @DisplayName("nullable 11: listJsonPaths on the flagged reference succeeds and logs the 18 flagged lines in order")
+    void listJsonPaths_flaggedReferenceDocument_logsFlaggedLinesInOrder() throws IOException {
+        writeProject(CONFIGURED_BUILD_SCRIPT, FLAGGED_REFERENCE_DOCUMENT);
+
+        BuildResult result = listJsonPathsRunner().build();
+
+        BuildTask task = result.task(":listJsonPaths");
+        assertThat(task).isNotNull();
+        assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        List<String> strippedLines =
+                result.getOutput().lines().map(String::strip).toList();
+        assertThat(strippedLines).containsSubsequence(FLAGGED_REFERENCE_LINES);
+        assertThat(dollarLines(result)).containsExactlyElementsOf(FLAGGED_REFERENCE_LINES);
     }
 
     @Test

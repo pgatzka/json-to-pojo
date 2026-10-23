@@ -26,7 +26,8 @@ jsonPojoGen {
 }
 ```
 
-`./gradlew listJsonPaths` then logs one line per node in the document, in document order, as `<path>: <type>`.
+`./gradlew listJsonPaths` then logs one line per node in the document, in document order, as `<path>: <type>`,
+optionally followed by `(nullable)`, `(optional)` or `(nullable, optional)` (see Types below).
 Array elements are collapsed to `[*]` and merged, so for
 
 ```json
@@ -58,6 +59,10 @@ Each path carries one of `float`, `integer`, `string`, `boolean`, `object`, `arr
 - any other mix of scalars (`string`, `integer`, `float`, `boolean`) gives `string`.
 - `object` or `array` mixed with any other non-null type fails the build with
   `Type conflict in <file>: Conflicting types at <path>: <types>`.
+
+Two flags may follow the type. `(nullable)` means a `null` was seen at that path. `(optional)` means at least one of the
+merged parent objects did not have the member at all. Both can appear: `$.items[*].note: string (nullable, optional)`.
+A parent that is itself `null` is reported as nullable and does not make its children optional.
 
 ### Objects that are maps
 

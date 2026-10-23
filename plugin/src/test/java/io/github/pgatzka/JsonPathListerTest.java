@@ -101,16 +101,62 @@ class JsonPathListerTest {
             typed("$.items[*]", JsonType.OBJECT),
             typed("$.items[*].sku", JsonType.STRING),
             typed("$.items[*].qty", JsonType.FLOAT),
-            typed("$.items[*].note", JsonType.STRING),
+            typed("$.items[*].note", JsonType.STRING, true, false),
             typed("$.items[*].flag", JsonType.STRING),
             typed("$.empty", JsonType.OBJECT),
-            typed("$.none", JsonType.NULL));
+            typed("$.none", JsonType.NULL, true, false));
+
+    /** Reference document of docs/specs/nullable-optional-paths.md (criterion 1). */
+    private static final String FLAGGED_REFERENCE_DOCUMENT = """
+            {
+              "id": 1,
+              "name": "widget",
+              "price": 9.5,
+              "active": true,
+              "address": {"city": "Berlin", "zip": "10115"},
+              "tags": ["a", "b"],
+              "items": [
+                {"sku": "s1", "qty": 2, "note": null, "flag": 1},
+                {"sku": "s2", "qty": 2.5, "note": "x", "flag": true, "price": 1.5}
+              ],
+              "empty": {},
+              "none": null
+            }
+            """;
+
+    private static final List<String> FLAGGED_REFERENCE_LINES = List.of(
+            "$.id: integer",
+            "$.name: string",
+            "$.price: float",
+            "$.active: boolean",
+            "$.address: object",
+            "$.address.city: string",
+            "$.address.zip: string",
+            "$.tags: array",
+            "$.tags[*]: string",
+            "$.items: array",
+            "$.items[*]: object",
+            "$.items[*].sku: string",
+            "$.items[*].qty: float",
+            "$.items[*].note: string (nullable)",
+            "$.items[*].flag: string",
+            "$.items[*].price: float (optional)",
+            "$.empty: object",
+            "$.none: null (nullable)");
 
     @TempDir
     Path tempDir;
 
     private static TypedJsonPath typed(String path, JsonType type) {
         return new TypedJsonPath(path, type);
+    }
+
+    private static TypedJsonPath typed(String path, JsonType type, boolean nullable, boolean optional) {
+        return new TypedJsonPath(path, type, nullable, optional);
+    }
+
+    private static List<String> linesOf(List<TypedJsonPath> typedPaths) {
+        return typedPaths.stream().map(TypedJsonPath::toString).toList();
     }
 
     private static List<String> pathsOf(List<TypedJsonPath> typedPaths) {
@@ -696,28 +742,28 @@ class JsonPathListerTest {
     }
 
     @Test
-    @DisplayName("typed 3: null before integer loses")
+    @DisplayName("typed 3 / nullable 12: null before integer loses (path is nullable)")
     void listPaths_nullThenInteger_isInteger() {
-        assertThat(JsonPathLister.listPaths("[null,1]")).containsExactly(typed("$[*]", JsonType.INTEGER));
+        assertThat(JsonPathLister.listPaths("[null,1]")).containsExactly(typed("$[*]", JsonType.INTEGER, true, false));
     }
 
     @Test
-    @DisplayName("typed 3: null after integer loses")
+    @DisplayName("typed 3 / nullable 12: null after integer loses (path is nullable)")
     void listPaths_integerThenNull_isInteger() {
-        assertThat(JsonPathLister.listPaths("[1,null]")).containsExactly(typed("$[*]", JsonType.INTEGER));
+        assertThat(JsonPathLister.listPaths("[1,null]")).containsExactly(typed("$[*]", JsonType.INTEGER, true, false));
     }
 
     @Test
-    @DisplayName("typed 3: only nulls stay null")
+    @DisplayName("typed 3 / nullable 12: only nulls stay null (path is nullable)")
     void listPaths_onlyNulls_isNull() {
-        assertThat(JsonPathLister.listPaths("[null,null]")).containsExactly(typed("$[*]", JsonType.NULL));
+        assertThat(JsonPathLister.listPaths("[null,null]")).containsExactly(typed("$[*]", JsonType.NULL, true, false));
     }
 
     @Test
-    @DisplayName("typed 3: null next to an object yields object and the object's children")
+    @DisplayName("typed 3 / nullable 12: null next to an object yields nullable object and the object's children")
     void listPaths_nullThenObject_isObjectWithChildren() {
         assertThat(JsonPathLister.listPaths("[null,{\"x\":1}]"))
-                .containsExactly(typed("$[*]", JsonType.OBJECT), typed("$[*].x", JsonType.INTEGER));
+                .containsExactly(typed("$[*]", JsonType.OBJECT, true, false), typed("$[*].x", JsonType.INTEGER));
     }
 
     @Test
@@ -733,9 +779,10 @@ class JsonPathListerTest {
     }
 
     @Test
-    @DisplayName("typed 4: integer, null, float yields float")
+    @DisplayName("typed 4 / nullable 12: integer, null, float yields nullable float")
     void listPaths_integerNullFloat_isFloat() {
-        assertThat(JsonPathLister.listPaths("[1,null,2.5]")).containsExactly(typed("$[*]", JsonType.FLOAT));
+        assertThat(JsonPathLister.listPaths("[1,null,2.5]"))
+                .containsExactly(typed("$[*]", JsonType.FLOAT, true, false));
     }
 
     @Test
@@ -775,16 +822,17 @@ class JsonPathListerTest {
     }
 
     @Test
-    @DisplayName("typed 5: null, integer, boolean yields string")
+    @DisplayName("typed 5 / nullable 12: null, integer, boolean yields nullable string")
     void listPaths_nullIntegerBoolean_isString() {
-        assertThat(JsonPathLister.listPaths("[null,1,false]")).containsExactly(typed("$[*]", JsonType.STRING));
+        assertThat(JsonPathLister.listPaths("[null,1,false]"))
+                .containsExactly(typed("$[*]", JsonType.STRING, true, false));
     }
 
     @Test
-    @DisplayName("typed 6: map values integer, float, null merge to float")
+    @DisplayName("typed 6 / nullable 12: map values integer, float, null merge to nullable float")
     void listPathsWithMapPaths_mapValuesIntegerFloatNull_isFloat() {
         assertThat(JsonPathLister.listPaths("{\"m\":{\"a\":1,\"b\":2.5,\"c\":null}}", Set.of("$.m")))
-                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.FLOAT));
+                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.FLOAT, true, false));
     }
 
     @Test
@@ -795,51 +843,51 @@ class JsonPathListerTest {
     }
 
     @Test
-    @DisplayName("typed 6: map values merge the same way when read from a file")
+    @DisplayName("typed 6 / nullable 12: map values merge the same way when read from a file")
     void listPathsFromFileWithMapPaths_mapValuesMerge() throws IOException {
         Path file = tempDir.resolve("typed-map.json");
         Files.writeString(file, "{\"m\":{\"a\":1,\"b\":2.5,\"c\":null}}", StandardCharsets.UTF_8);
 
         assertThat(JsonPathLister.listPaths(file, Set.of("$.m")))
-                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.FLOAT));
+                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.FLOAT, true, false));
     }
 
     @Test
-    @DisplayName("typed 6: null value at a map path loses against the object")
+    @DisplayName("typed 6 / nullable 12: null value at a map path loses against the object (path is nullable)")
     void listPathsWithMapPaths_nullNextToObjectAtMapPath_isObject() {
         assertThat(JsonPathLister.listPaths(
                         "{\"items\":[{\"attrs\":{\"a\":1}},{\"attrs\":null}]}", Set.of("$.items[*].attrs")))
                 .containsExactly(
                         typed("$.items", JsonType.ARRAY),
                         typed("$.items[*]", JsonType.OBJECT),
-                        typed("$.items[*].attrs", JsonType.OBJECT),
+                        typed("$.items[*].attrs", JsonType.OBJECT, true, false),
                         typed("$.items[*].attrs.*", JsonType.INTEGER));
     }
 
     @Test
-    @DisplayName("typed: a map path matching only null is listed with type null")
+    @DisplayName("typed / nullable 12: a map path matching only null is listed with type null and nullable")
     void listPathsWithMapPaths_onlyNullMatched_isNull() {
         assertThat(JsonPathLister.listPaths("{\"a\":null}", Set.of("$.a")))
-                .containsExactly(typed("$.a", JsonType.NULL));
+                .containsExactly(typed("$.a", JsonType.NULL, true, false));
     }
 
     @Test
-    @DisplayName("typed: a path keeps the position of its first occurrence when a later node decides its type")
+    @DisplayName("typed / nullable 12: a path keeps its first-occurrence position when a later node decides its type")
     void listPaths_laterNodeDecidesType_keepsFirstOccurrencePosition() {
         assertThat(JsonPathLister.listPaths("[{\"a\":null},{\"b\":1,\"a\":\"s\"}]"))
                 .containsExactly(
                         typed("$[*]", JsonType.OBJECT),
-                        typed("$[*].a", JsonType.STRING),
-                        typed("$[*].b", JsonType.INTEGER));
+                        typed("$[*].a", JsonType.STRING, true, false),
+                        typed("$[*].b", JsonType.INTEGER, false, true));
     }
 
     @Test
-    @DisplayName("typed: children of an object are listed even when the object is preceded by null")
+    @DisplayName("typed / nullable 12: children of an object are listed even when the object is preceded by null")
     void listPaths_nullThenObjectMember_listsChildren() {
         assertThat(JsonPathLister.listPaths("[{\"a\":null},{\"a\":{\"x\":1}}]"))
                 .containsExactly(
                         typed("$[*]", JsonType.OBJECT),
-                        typed("$[*].a", JsonType.OBJECT),
+                        typed("$[*].a", JsonType.OBJECT, true, false),
                         typed("$[*].a.x", JsonType.INTEGER));
     }
 
@@ -928,5 +976,357 @@ class JsonPathListerTest {
         assertThatThrownBy(() -> typedPaths.add(typed("$.x", JsonType.STRING)))
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> typedPaths.remove(0)).isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // nullable-optional-paths (docs/specs/nullable-optional-paths.md)
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("nullable 1: reference document yields the 18 flagged lines in order")
+    void listPaths_flaggedReferenceDocument_returnsExpectedLinesInOrder() {
+        List<TypedJsonPath> typedPaths = JsonPathLister.listPaths(FLAGGED_REFERENCE_DOCUMENT);
+
+        assertThat(typedPaths).hasSize(18);
+        assertThat(linesOf(typedPaths)).containsExactlyElementsOf(FLAGGED_REFERENCE_LINES);
+    }
+
+    @Test
+    @DisplayName("nullable 1: reference document entries carry the expected flags")
+    void listPaths_flaggedReferenceDocument_flagsOnlyNoteNoneAndItemPrice() {
+        List<TypedJsonPath> typedPaths = JsonPathLister.listPaths(FLAGGED_REFERENCE_DOCUMENT);
+
+        assertThat(typedPaths)
+                .filteredOn(TypedJsonPath::nullable)
+                .extracting(TypedJsonPath::path)
+                .containsExactly("$.items[*].note", "$.none");
+        assertThat(typedPaths)
+                .filteredOn(TypedJsonPath::optional)
+                .extracting(TypedJsonPath::path)
+                .containsExactly("$.items[*].price");
+        assertThat(typedPaths)
+                .contains(
+                        typed("$.items[*].note", JsonType.STRING, true, false),
+                        typed("$.items[*].price", JsonType.FLOAT, false, true),
+                        typed("$.none", JsonType.NULL, true, false),
+                        typed("$.price", JsonType.FLOAT, false, false));
+    }
+
+    @Test
+    @DisplayName("nullable 1: reference document read from a file yields the same 18 lines")
+    void listPathsFromFile_flaggedReferenceDocument_returnsExpectedLines() throws IOException {
+        Path file = tempDir.resolve("flagged-reference.json");
+        Files.writeString(file, FLAGGED_REFERENCE_DOCUMENT, StandardCharsets.UTF_8);
+
+        assertThat(linesOf(JsonPathLister.listPaths(file))).containsExactlyElementsOf(FLAGGED_REFERENCE_LINES);
+    }
+
+    @Test
+    @DisplayName("nullable 1: reference document with an empty map-path set yields the same 18 lines")
+    void listPathsWithEmptyMapPaths_flaggedReferenceDocument_returnsExpectedLines() {
+        assertThat(linesOf(JsonPathLister.listPaths(FLAGGED_REFERENCE_DOCUMENT, Set.of())))
+                .containsExactlyElementsOf(FLAGGED_REFERENCE_LINES);
+    }
+
+    @Test
+    @DisplayName("nullable 1: reference document read from a file with an empty map-path set yields the same 18 lines")
+    void listPathsFromFileWithEmptyMapPaths_flaggedReferenceDocument_returnsExpectedLines() throws IOException {
+        Path file = tempDir.resolve("flagged-reference-map.json");
+        Files.writeString(file, FLAGGED_REFERENCE_DOCUMENT, StandardCharsets.UTF_8);
+
+        assertThat(linesOf(JsonPathLister.listPaths(file, Set.of())))
+                .containsExactlyElementsOf(FLAGGED_REFERENCE_LINES);
+    }
+
+    @Test
+    @DisplayName("nullable 2: root members are never optional; a null root member is nullable")
+    void listPaths_rootMembers_nullableButNeverOptional() {
+        List<TypedJsonPath> typedPaths = JsonPathLister.listPaths("{\"a\":null,\"b\":1}");
+
+        assertThat(typedPaths)
+                .containsExactly(
+                        typed("$.a", JsonType.NULL, true, false), typed("$.b", JsonType.INTEGER, false, false));
+        assertThat(typedPaths.get(0).type()).isEqualTo(JsonType.NULL);
+        assertThat(typedPaths.get(0).nullable()).isTrue();
+        assertThat(typedPaths.get(0).optional()).isFalse();
+        assertThat(typedPaths.get(1).type()).isEqualTo(JsonType.INTEGER);
+        assertThat(typedPaths.get(1).nullable()).isFalse();
+        assertThat(typedPaths.get(1).optional()).isFalse();
+    }
+
+    @Test
+    @DisplayName("nullable 3: integer merged with null is nullable integer")
+    void listPaths_integerAndNullMember_isNullableInteger() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":1},{\"a\":null}]")))
+                .containsExactly("$[*]: object", "$[*].a: integer (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable 3: only null members merge to nullable null")
+    void listPaths_onlyNullMembers_isNullableNull() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":null},{\"a\":null}]")))
+                .containsExactly("$[*]: object", "$[*].a: null (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable 3: mixed scalars with null merge to nullable string")
+    void listPaths_mixedScalarsWithNull_isNullableString() {
+        assertThat(linesOf(JsonPathLister.listPaths("[1,null,\"a\"]"))).containsExactly("$[*]: string (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable 4: member missing in one element is optional")
+    void listPaths_memberMissingInOneElement_isOptional() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":1},{}]")))
+                .containsExactly("$[*]: object", "$[*].a: integer (optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 4: disjoint members are both optional")
+    void listPaths_disjointMembers_areBothOptional() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":1},{\"b\":2}]")))
+                .containsExactly("$[*]: object", "$[*].a: integer (optional)", "$[*].b: integer (optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 4: member present in every element is not optional")
+    void listPaths_memberPresentInEveryElement_isNotOptional() {
+        assertThat(JsonPathLister.listPaths("[{\"a\":1},{\"a\":2},{\"a\":3}]"))
+                .containsExactly(typed("$[*]", JsonType.OBJECT), typed("$[*].a", JsonType.INTEGER, false, false));
+    }
+
+    @Test
+    @DisplayName("nullable 5: null member missing in one element is nullable and optional")
+    void listPaths_nullMemberMissingInOneElement_isNullableAndOptional() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":null},{}]")))
+                .containsExactly("$[*]: object", "$[*].a: null (nullable, optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 5: integer, null and missing member is nullable and optional integer")
+    void listPaths_integerNullAndMissingMember_isNullableAndOptionalInteger() {
+        assertThat(JsonPathLister.listPaths("[{\"a\":1},{\"a\":null},{}]"))
+                .containsExactly(typed("$[*]", JsonType.OBJECT), typed("$[*].a", JsonType.INTEGER, true, true));
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":1},{\"a\":null},{}]")))
+                .containsExactly("$[*]: object", "$[*].a: integer (nullable, optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 6: member missing in one map value is optional; .* itself is not")
+    void listPathsWithMapPaths_memberMissingInOneMapValue_isOptional() {
+        assertThat(linesOf(JsonPathLister.listPaths("{\"m\":{\"x\":{\"k\":1},\"y\":{}}}", Set.of("$.m"))))
+                .containsExactly("$.m: object", "$.m.*: object", "$.m.*.k: integer (optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 6: null map value makes .* nullable")
+    void listPathsWithMapPaths_nullMapValue_isNullable() {
+        assertThat(linesOf(JsonPathLister.listPaths("{\"m\":{\"x\":1,\"y\":null}}", Set.of("$.m"))))
+                .containsExactly("$.m: object", "$.m.*: integer (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable 6: map flags are computed the same way when read from a file")
+    void listPathsFromFileWithMapPaths_memberMissingInOneMapValue_isOptional() throws IOException {
+        Path file = tempDir.resolve("flagged-map.json");
+        Files.writeString(file, "{\"m\":{\"x\":{\"k\":1},\"y\":{}}}", StandardCharsets.UTF_8);
+
+        assertThat(JsonPathLister.listPaths(file, Set.of("$.m")))
+                .containsExactly(
+                        typed("$.m", JsonType.OBJECT),
+                        typed("$.m.*", JsonType.OBJECT),
+                        typed("$.m.*.k", JsonType.INTEGER, false, true));
+    }
+
+    @Test
+    @DisplayName("nullable 6 / Out of scope: .* is never optional, even when one map is empty")
+    void listPathsWithMapPaths_emptyMapNextToFilledMap_wildcardNotOptional() {
+        assertThat(JsonPathLister.listPaths(
+                        "{\"items\":[{\"attrs\":{\"a\":1}},{\"attrs\":{}}]}", Set.of("$.items[*].attrs")))
+                .containsExactly(
+                        typed("$.items", JsonType.ARRAY),
+                        typed("$.items[*]", JsonType.OBJECT),
+                        typed("$.items[*].attrs", JsonType.OBJECT),
+                        typed("$.items[*].attrs.*", JsonType.INTEGER, false, false));
+    }
+
+    @Test
+    @DisplayName("nullable 7: null parents are not counted for optionality")
+    void listPaths_nullParent_doesNotMakeChildOptional() {
+        assertThat(JsonPathLister.listPaths("[{\"attrs\":{\"a\":1}},{\"attrs\":null}]"))
+                .containsExactly(
+                        typed("$[*]", JsonType.OBJECT),
+                        typed("$[*].attrs", JsonType.OBJECT, true, false),
+                        typed("$[*].attrs.a", JsonType.INTEGER, false, false));
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"attrs\":{\"a\":1}},{\"attrs\":null}]")))
+                .containsExactly("$[*]: object", "$[*].attrs: object (nullable)", "$[*].attrs.a: integer");
+    }
+
+    @Test
+    @DisplayName("nullable 8: [*] is never optional, even when one array is empty")
+    void listPaths_emptyInnerArray_elementNotOptional() {
+        assertThat(JsonPathLister.listPaths("[[1],[]]"))
+                .containsExactly(
+                        typed("$[*]", JsonType.ARRAY, false, false), typed("$[*][*]", JsonType.INTEGER, false, false));
+    }
+
+    @Test
+    @DisplayName("nullable 8: null element in an inner array makes [*][*] nullable")
+    void listPaths_nullInnerArrayElement_isNullable() {
+        assertThat(linesOf(JsonPathLister.listPaths("[[1],[null]]")))
+                .containsExactly("$[*]: array", "$[*][*]: integer (nullable)");
+    }
+
+    @Test
+    @DisplayName("nullable 9: nested member missing in one nested object is optional")
+    void listPaths_nestedMemberMissing_isOptional() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":{\"b\":1}},{\"a\":{}}]")))
+                .containsExactly("$[*]: object", "$[*].a: object", "$[*].a.b: integer (optional)");
+    }
+
+    @Test
+    @DisplayName("nullable 9: missing parent makes the parent optional but not its always-present child")
+    void listPaths_missingParent_onlyParentOptional() {
+        assertThat(JsonPathLister.listPaths("[{\"a\":{\"b\":1}},{}]"))
+                .containsExactly(
+                        typed("$[*]", JsonType.OBJECT),
+                        typed("$[*].a", JsonType.OBJECT, false, true),
+                        typed("$[*].a.b", JsonType.INTEGER, false, false));
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"a\":{\"b\":1}},{}]")))
+                .containsExactly("$[*]: object", "$[*].a: object (optional)", "$[*].a.b: integer");
+    }
+
+    @Test
+    @DisplayName("nullable rules: bracket-notation member paths can be optional")
+    void listPaths_bracketNotationMemberMissing_isOptional() {
+        assertThat(linesOf(JsonPathLister.listPaths("[{\"first name\":\"x\"},{}]")))
+                .containsExactly("$[*]: object", "$[*]['first name']: string (optional)");
+    }
+
+    @Test
+    @DisplayName("nullable rules: member of a nested object inside a root object is not optional when always present")
+    void listPaths_nestedObjectUnderRoot_notOptional() {
+        assertThat(JsonPathLister.listPaths("{\"a\":{\"b\":{\"c\":true}}}"))
+                .containsExactly(
+                        typed("$.a", JsonType.OBJECT, false, false),
+                        typed("$.a.b", JsonType.OBJECT, false, false),
+                        typed("$.a.b.c", JsonType.BOOLEAN, false, false));
+    }
+
+    @Test
+    @DisplayName("nullable 12: typed reference still holds for path() and type()")
+    void listPaths_typedReferenceDocument_pathsAndTypesUnchanged() {
+        List<TypedJsonPath> typedPaths = JsonPathLister.listPaths(TYPED_REFERENCE_DOCUMENT);
+
+        assertThat(pathsOf(typedPaths))
+                .containsExactly(
+                        "$.id",
+                        "$.name",
+                        "$.price",
+                        "$.active",
+                        "$.address",
+                        "$.address.city",
+                        "$.address.zip",
+                        "$.tags",
+                        "$.tags[*]",
+                        "$.items",
+                        "$.items[*]",
+                        "$.items[*].sku",
+                        "$.items[*].qty",
+                        "$.items[*].note",
+                        "$.items[*].flag",
+                        "$.empty",
+                        "$.none");
+        assertThat(typesOf(typedPaths))
+                .containsExactly(
+                        JsonType.INTEGER,
+                        JsonType.STRING,
+                        JsonType.FLOAT,
+                        JsonType.BOOLEAN,
+                        JsonType.OBJECT,
+                        JsonType.STRING,
+                        JsonType.STRING,
+                        JsonType.ARRAY,
+                        JsonType.STRING,
+                        JsonType.ARRAY,
+                        JsonType.OBJECT,
+                        JsonType.STRING,
+                        JsonType.FLOAT,
+                        JsonType.STRING,
+                        JsonType.STRING,
+                        JsonType.OBJECT,
+                        JsonType.NULL);
+    }
+
+    @Test
+    @DisplayName("nullable 12: typed reference entries are flagged where a flag is now true")
+    void listPaths_typedReferenceDocument_flaggedLines() {
+        assertThat(linesOf(JsonPathLister.listPaths(TYPED_REFERENCE_DOCUMENT)))
+                .contains("$.items[*].note: string (nullable)", "$.none: null (nullable)")
+                .doesNotContain("$.items[*].note: string", "$.none: null");
+    }
+
+    @Test
+    @DisplayName("nullable 12: map-path reference still holds for path() and type()")
+    void listPathsWithMapPaths_mapReferenceDocument_pathsAndTypesUnchanged() {
+        List<TypedJsonPath> typedPaths = JsonPathLister.listPaths(MAP_REFERENCE_DOCUMENT, MAP_REFERENCE_MAP_PATHS);
+
+        assertThat(pathsOf(typedPaths)).containsExactlyElementsOf(MAP_REFERENCE_PATHS);
+        assertThat(typesOf(typedPaths))
+                .containsExactly(
+                        JsonType.INTEGER,
+                        JsonType.OBJECT,
+                        JsonType.OBJECT,
+                        JsonType.STRING,
+                        JsonType.BOOLEAN,
+                        JsonType.ARRAY,
+                        JsonType.OBJECT,
+                        JsonType.STRING,
+                        JsonType.OBJECT,
+                        JsonType.STRING,
+                        JsonType.OBJECT);
+    }
+
+    @Test
+    @DisplayName("nullable 12: map-path reference flags only the member missing in one map value")
+    void listPathsWithMapPaths_mapReferenceDocument_flaggedLines() {
+        assertThat(linesOf(JsonPathLister.listPaths(MAP_REFERENCE_DOCUMENT, MAP_REFERENCE_MAP_PATHS)))
+                .containsExactly(
+                        "$.id: integer",
+                        "$.translations: object",
+                        "$.translations.*: object",
+                        "$.translations.*.text: string",
+                        "$.translations.*.plural: boolean (optional)",
+                        "$.items: array",
+                        "$.items[*]: object",
+                        "$.items[*].sku: string",
+                        "$.items[*].attrs: object",
+                        "$.items[*].attrs.*: string",
+                        "$.empty: object");
+    }
+
+    @Test
+    @DisplayName("nullable Edge: type conflicts are still detected regardless of the flags")
+    void listPaths_conflictWithNullElement_stillThrowsConflict() {
+        assertThatThrownBy(() -> JsonPathLister.listPaths("[{\"a\":1},null,[1]]"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Conflicting types at $[*]: object, array");
+    }
+
+    @Test
+    @DisplayName("nullable Edge: map-path errors are still detected regardless of the flags")
+    void listPathsWithMapPaths_unmatchedMapPathWithNulls_stillThrowsNotFound() {
+        assertThatThrownBy(() -> JsonPathLister.listPaths("{\"a\":null,\"b\":[{},{\"c\":null}]}", Set.of("$.nope")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageStartingWith("Map path $.nope not found");
+    }
+
+    @Test
+    @DisplayName("nullable Edge: scalar roots and empty containers still yield an empty list")
+    void listPaths_scalarRootsAndEmptyContainers_stillEmpty() {
+        assertThat(JsonPathLister.listPaths("null")).isEmpty();
+        assertThat(JsonPathLister.listPaths("1")).isEmpty();
+        assertThat(JsonPathLister.listPaths("{}")).isEmpty();
+        assertThat(JsonPathLister.listPaths("[]")).isEmpty();
     }
 }
