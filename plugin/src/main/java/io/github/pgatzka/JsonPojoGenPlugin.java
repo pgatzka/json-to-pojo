@@ -21,7 +21,8 @@ public class JsonPojoGenPlugin implements Plugin<Project> {
     }
 
     /**
-     * Registers the {@code greeting} task on the given project.
+     * Registers the {@code greeting} task, the {@code jsonPojoGen} extension and the {@code listJsonPaths} task
+     * on the given project.
      *
      * @param project the project the plugin is applied to; never null when called by Gradle
      */
@@ -29,5 +30,13 @@ public class JsonPojoGenPlugin implements Plugin<Project> {
     public void apply(Project project) {
         project.getTasks().register(GREETING_TASK_NAME, task ->
                 task.doLast(t -> System.out.println("Hello from plugin '" + PLUGIN_ID + "'")));
+
+        JsonPojoGenExtension extension =
+                project.getExtensions().create(JsonPojoGenExtension.NAME, JsonPojoGenExtension.class);
+        project.getTasks().register(ListJsonPathsTask.NAME, ListJsonPathsTask.class, task -> {
+            task.setGroup(ListJsonPathsTask.GROUP);
+            task.setDescription("Logs the JSON paths found in the configured input file.");
+            task.getInputFile().convention(extension.getInputFile());
+        });
     }
 }

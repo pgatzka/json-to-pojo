@@ -10,6 +10,42 @@ A Gradle plugin that generates Java POJOs from JSON. Built with Java 25 and Grad
   and the vendor's download host, e.g. `github.com` for Temurin).
 - Always use the wrapper: `./gradlew` (or `gradlew.bat` on Windows). Never a system Gradle.
 
+## Usage
+
+Apply the plugin and point it at a JSON file:
+
+```kotlin
+plugins {
+    id("io.github.pgatzka.json-pojo-gen")
+}
+
+jsonPojoGen {
+    inputFile.set(file("input.json"))
+}
+```
+
+`./gradlew listJsonPaths` then logs one JSON path per node in the document, in document order. Array elements are
+collapsed to `[*]` and merged, so for
+
+```json
+{"id": 1, "address": {"city": "Berlin"}, "items": [{"sku": "s1"}, {"sku": "s2", "qty": 2}]}
+```
+
+the task prints
+
+```
+$.id
+$.address
+$.address.city
+$.items
+$.items[*]
+$.items[*].sku
+$.items[*].qty
+```
+
+Keys that are not plain identifiers use bracket notation, e.g. `$['first name']`. The build fails with
+`Invalid JSON in <file>` when the file does not parse.
+
 ## Build and test
 
 ```sh

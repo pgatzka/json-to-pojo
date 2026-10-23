@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `jsonPojoGen` extension with an `inputFile` property and a `listJsonPaths` task that logs one JSON path per node of
+  the input document (arrays collapsed to `[*]`, non-identifier keys in bracket notation). Jackson databind 2.22.4 is
+  now an implementation dependency. Spec: `docs/specs/list-json-paths.md`.
 - Spec-first TDD orchestrator setup for Claude Code: `CLAUDE.md`, `test-writer`, `implementer`
   and `reviewer` agents, path-isolation hooks, and `docs/specs/SPEC_TEMPLATE.md`.
 - AssertJ 3.27.3 as a test dependency.
