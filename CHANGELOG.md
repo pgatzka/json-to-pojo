@@ -12,9 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spec-first TDD orchestrator setup for Claude Code: `CLAUDE.md`, `test-writer`, `implementer`
   and `reviewer` agents, path-isolation hooks, and `docs/specs/SPEC_TEMPLATE.md`.
 - AssertJ 3.27.3 as a test dependency.
+- Java 25 toolchain declaration for the `plugin` subproject and the `org.gradle.toolchains.foojay-resolver-convention`
+  1.0.0 settings plugin, so Gradle provisions a JDK 25 automatically when none is installed locally.
+  Spec: `docs/specs/java-toolchain-foojay.md`.
 
 ### Changed
 
+- The `implementer` agent may now edit `settings.gradle.kts`, `plugin/build.gradle.kts` and `gradle/libs.versions.toml`
+  whenever a spec spells out the build-script change (plugin, toolchain or dependency), not only for a new dependency.
 - Moved the scaffold plugin from package `org.example` to `io.github.pgatzka`; plugin id is now
   `io.github.pgatzka.json-pojo-gen` (was `org.example.greeting`). The `greeting` task is unchanged apart from the id it prints.
   Spec: `docs/specs/package-migration.md`.

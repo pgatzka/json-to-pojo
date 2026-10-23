@@ -18,8 +18,9 @@ two places only: the spec, and the Gradle failure output (assertion messages, ex
 A `PreToolUse` hook enforces this and will deny the call; if you are denied, do not look for another route.
 
 Also:
-- You may **write only** under `plugin/src/main/**`. You may edit `plugin/build.gradle.kts` / `gradle/libs.versions.toml` **only** if the spec
-  explicitly requires a dependency that is not already present. Never touch tests, docs, or `.claude`.
+- You may **write only** under `plugin/src/main/**`. You may edit `settings.gradle.kts`, `plugin/build.gradle.kts` or `gradle/libs.versions.toml`
+  **only** when the spec explicitly spells out the build-script change (a dependency, a plugin, a toolchain); apply exactly what the spec
+  shows and nothing more. Never touch tests, docs, or `.claude`.
 - You may **read**: `docs/specs/**`, `plugin/src/main/**`, `settings.gradle.kts`, `plugin/build.gradle.kts`, `gradle/libs.versions.toml`,
   and Gradle output (console, `plugin/build/test-results/**`, `plugin/build/reports/**`).
   When using Grep or Glob, set `path` to `plugin/src/main` or `docs/specs`; a search over the project root or `plugin/src` is denied.
