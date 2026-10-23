@@ -52,7 +52,8 @@ instructions in each agent's prompt. See `.claude/hooks/README.md` for what the 
    touch. Number the acceptance criteria. Ask the user if a decision genuinely cannot be made from the request;
    otherwise make the call and record it in the spec.
 3. **Run `test-writer`** with the spec path (prompt: `Write tests for docs/specs/<feature>.md`). Wait for its one-line report.
-   - `Done: ...` → continue.
+   - `Done: ...` → run `./gradlew spotlessApply` yourself (the test-writer cannot run Gradle; this keeps the implementer's
+     `check` from failing on test formatting, whose failure output would show test lines), then continue.
    - `Could not do X because Y` → fix the spec (or ask the user if the gap is a product decision), then re-run step 3.
 4. **Run `implementer`** with the spec path (prompt: `Implement docs/specs/<feature>.md`). It codes, runs `./gradlew test`,
    fixes up to 5 times, writes Javadoc on all public types and methods, and reports one line.
