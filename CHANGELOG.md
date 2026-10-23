@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `generateJsonPojos` task (cacheable) and extension properties `packageName` (required), `rootClassName` (default:
+  input file name in UpperCamelCase), `classNames`, `generateEqualsAndHashCode`, `generateToString` and
+  `outputDirectory` (default `build/generated/sources/jsonPojoGen/java/main`). With the `java` plugin applied the
+  output directory joins the `main` source set, so `compileJava` compiles the generated classes. Stale files are
+  removed before each generation. Spec: `docs/specs/generate-pojos-task.md`.
 - `io.github.pgatzka.codegen.PojoGenerator` with `GeneratorOptions` and `JavaFile`: turns a typed path list into
   mutable Java POJOs, one top-level class per JSON object. `integer`/`float`/`boolean` map to `long`/`double`/`boolean`,
   boxed when nullable or optional; arrays to `List<T>`, map paths to `Map<String, T>`, `null`-only paths to `Object`.

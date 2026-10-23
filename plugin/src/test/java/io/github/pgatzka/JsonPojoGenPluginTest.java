@@ -1,13 +1,19 @@
 package io.github.pgatzka;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
 import org.gradle.api.plugins.UnknownPluginException;
+import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -290,5 +296,239 @@ class JsonPojoGenPluginTest {
         extensionOf(project).getMapPaths().add("$.m");
 
         assertThat(listJsonPathsTaskOf(project).getMapPaths().get()).containsExactly("$.m");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // generate-pojos-task (docs/specs/generate-pojos-task.md)
+    // ---------------------------------------------------------------------------------------------
+
+    private static GenerateJsonPojosTask generateTaskOf(Project project) {
+        return project.getTasks()
+                .named(GenerateJsonPojosTask.NAME, GenerateJsonPojosTask.class)
+                .get();
+    }
+
+    private static Set<File> mainJavaSrcDirs(Project project) {
+        return project.getExtensions()
+                .getByType(SourceSetContainer.class)
+                .getByName("main")
+                .getJava()
+                .getSrcDirs();
+    }
+
+    @Test
+    @DisplayName("generate-pojos 1: applying by id registers generateJsonPojos and keeps listJsonPaths")
+    void applyById_registersGenerateJsonPojosTask() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        assertThat(project.getTasks().findByName("generateJsonPojos")).isInstanceOf(GenerateJsonPojosTask.class);
+        assertThat(project.getTasks().findByName("listJsonPaths")).isInstanceOf(ListJsonPathsTask.class);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 1: applying by class registers generateJsonPojos and keeps listJsonPaths")
+    void applyByClass_registersGenerateJsonPojosTask() {
+        Project project = projectWithPlugin();
+
+        assertThat(project.getTasks().findByName("generateJsonPojos")).isInstanceOf(GenerateJsonPojosTask.class);
+        assertThat(project.getTasks().findByName("listJsonPaths")).isInstanceOf(ListJsonPathsTask.class);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 1: generateJsonPojos has group json-pojo-gen")
+    void applyByClass_generateJsonPojosTaskHasGroup() {
+        Project project = projectWithPlugin();
+
+        assertThat(project.getTasks().getByName("generateJsonPojos").getGroup()).isEqualTo("json-pojo-gen");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 1: generateJsonPojos has the specified description")
+    void applyByClass_generateJsonPojosTaskHasDescription() {
+        Project project = projectWithPlugin();
+
+        assertThat(project.getTasks().getByName("generateJsonPojos").getDescription())
+                .isEqualTo("Generates Java POJOs from the configured JSON file.");
+    }
+
+    @Test
+    @DisplayName("generate-pojos Edge: applying twice leaves exactly one generateJsonPojos task")
+    void applyTwice_leavesOneGenerateJsonPojosTask() {
+        Project project = projectWithPlugin();
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        assertThat(project.getTasks().getNames())
+                .filteredOn("generateJsonPojos"::equals)
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 2: equals/hashCode and toString flags default to true")
+    void extension_flagsDefaultToTrue() {
+        JsonPojoGenExtension extension = extensionOf(projectWithPlugin());
+
+        assertThat(extension.getGenerateEqualsAndHashCode()).isNotNull();
+        assertThat(extension.getGenerateToString()).isNotNull();
+        assertThat(extension.getGenerateEqualsAndHashCode().get()).isTrue();
+        assertThat(extension.getGenerateToString().get()).isTrue();
+    }
+
+    @Test
+    @DisplayName("generate-pojos 2: classNames defaults to an empty map")
+    void extension_classNamesEmptyByDefault() {
+        JsonPojoGenExtension extension = extensionOf(projectWithPlugin());
+
+        assertThat(extension.getClassNames()).isNotNull();
+        assertThat(extension.getClassNames().get()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("generate-pojos 2: outputDirectory defaults to <build dir>/generated/sources/jsonPojoGen/java/main")
+    void extension_outputDirectoryConvention() {
+        Project project = projectWithPlugin();
+        JsonPojoGenExtension extension = extensionOf(project);
+
+        Path expected = project.getLayout()
+                .getBuildDirectory()
+                .get()
+                .getAsFile()
+                .toPath()
+                .resolve("generated/sources/jsonPojoGen/java/main");
+        assertThat(extension.getOutputDirectory()).isNotNull();
+        assertThat(extension.getOutputDirectory().get().getAsFile().toPath()).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 2: packageName has no default")
+    void extension_packageNameNotPresentByDefault() {
+        JsonPojoGenExtension extension = extensionOf(projectWithPlugin());
+
+        assertThat(extension.getPackageName()).isNotNull();
+        assertThat(extension.getPackageName().isPresent()).isFalse();
+    }
+
+    @Test
+    @DisplayName("generate-pojos 3: rootClassName for product.json is Product")
+    void extension_rootClassNameFromProductJson_isProduct() {
+        Project project = projectWithPlugin();
+        JsonPojoGenExtension extension = extensionOf(project);
+
+        extension.getInputFile().set(project.file("product.json"));
+
+        assertThat(extension.getRootClassName().get()).isEqualTo("Product");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 3: rootClassName for my-order.json is MyOrder")
+    void extension_rootClassNameFromMyOrderJson_isMyOrder() {
+        Project project = projectWithPlugin();
+        JsonPojoGenExtension extension = extensionOf(project);
+
+        extension.getInputFile().set(project.file("my-order.json"));
+
+        assertThat(extension.getRootClassName().get()).isEqualTo("MyOrder");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 3: rootClassName for 2fa.json is _2fa")
+    void extension_rootClassNameFrom2faJson_isUnderscore2fa() {
+        Project project = projectWithPlugin();
+        JsonPojoGenExtension extension = extensionOf(project);
+
+        extension.getInputFile().set(project.file("2fa.json"));
+
+        assertThat(extension.getRootClassName().get()).isEqualTo("_2fa");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 3: rootClassName tracks later changes of inputFile")
+    void extension_rootClassNameTracksInputFileChanges() {
+        Project project = projectWithPlugin();
+        JsonPojoGenExtension extension = extensionOf(project);
+
+        extension.getInputFile().set(project.file("product.json"));
+        extension.getInputFile().set(project.file("my-order.json"));
+
+        assertThat(extension.getRootClassName().get()).isEqualTo("MyOrder");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 3: an explicit rootClassName wins over the convention")
+    void extension_explicitRootClassNameWins() {
+        Project project = projectWithPlugin();
+        JsonPojoGenExtension extension = extensionOf(project);
+
+        extension.getInputFile().set(project.file("product.json"));
+        extension.getRootClassName().set("Thing");
+
+        assertThat(extension.getRootClassName().get()).isEqualTo("Thing");
+    }
+
+    @Test
+    @DisplayName("generate-pojos Edge: rootClassName for '.json' and '-.json' does not throw at configuration time")
+    void extension_rootClassNameForEmptyBaseName_doesNotThrow() {
+        for (String name : List.of(".json", "-.json")) {
+            Project project = projectWithPlugin();
+            JsonPojoGenExtension extension = extensionOf(project);
+
+            extension.getInputFile().set(project.file(name));
+
+            assertThatCode(() -> extension.getRootClassName().get()).as(name).doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    @DisplayName("generate-pojos Edge: java applied after the plugin -> main java srcDirs contain the output directory")
+    void javaAppliedAfterPlugin_wiresOutputDirectoryIntoMainSourceSet() {
+        Project project = ProjectBuilder.builder().build();
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+        project.getPlugins().apply("java");
+
+        File outputDir = generateTaskOf(project).getOutputDirectory().get().getAsFile();
+
+        assertThat(mainJavaSrcDirs(project)).contains(outputDir);
+    }
+
+    @Test
+    @DisplayName(
+            "generate-pojos Edge: java applied before the plugin -> main java srcDirs contain the output directory")
+    void javaAppliedBeforePlugin_wiresOutputDirectoryIntoMainSourceSet() {
+        Project project = ProjectBuilder.builder().build();
+        project.getPlugins().apply("java");
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        File outputDir = generateTaskOf(project).getOutputDirectory().get().getAsFile();
+
+        assertThat(mainJavaSrcDirs(project)).contains(outputDir);
+    }
+
+    @Test
+    @DisplayName("generate-pojos Edge: main java srcDirs follow a custom extension outputDirectory")
+    void javaApplied_srcDirsFollowCustomOutputDirectory() {
+        Project project = ProjectBuilder.builder().build();
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+        project.getPlugins().apply("java");
+        File custom = project.file("custom-gen");
+
+        extensionOf(project).getOutputDirectory().set(custom);
+
+        assertThat(mainJavaSrcDirs(project)).contains(custom);
+    }
+
+    @Test
+    @DisplayName("generate-pojos Edge: with the java plugin, compileJava depends on generateJsonPojos")
+    void javaApplied_compileJavaDependsOnGenerateJsonPojos() {
+        Project project = ProjectBuilder.builder().build();
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+        project.getPlugins().apply("java");
+
+        Task compileJava = project.getTasks().getByName("compileJava");
+        List<String> dependencyNames = compileJava.getTaskDependencies().getDependencies(compileJava).stream()
+                .map(Task::getName)
+                .toList();
+
+        assertThat(dependencyNames).contains("generateJsonPojos");
     }
 }

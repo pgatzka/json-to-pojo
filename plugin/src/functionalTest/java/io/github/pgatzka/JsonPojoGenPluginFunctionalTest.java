@@ -350,4 +350,221 @@ class JsonPojoGenPluginFunctionalTest {
         assertThat(task.getOutcome()).isEqualTo(TaskOutcome.FAILED);
         assertThat(result.getOutput()).contains("Map path error for ").contains("does not point to a JSON object");
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // generate-pojos-task (docs/specs/generate-pojos-task.md)
+    // ---------------------------------------------------------------------------------------------
+
+    /** Reference input of docs/specs/pojo-generator.md ("Generation rules" -> "Reference input"). */
+    private static final String PRODUCT_DOCUMENT = """
+            {
+              "id": 1,
+              "name": "widget",
+              "price": 9.5,
+              "active": true,
+              "first name": "x",
+              "address": {"city": "Berlin", "zip": "10115"},
+              "tags": ["a", "b"],
+              "items": [
+                {"sku": "s1", "qty": 2, "note": null, "attrs": {"color": "red"}},
+                {"sku": "s2", "qty": 2.5, "note": "x", "price": 1.5, "attrs": {"size": 3}}
+              ],
+              "translations": {"en": {"text": "Hello", "plural": false}, "de": {"text": "Hallo"}},
+              "none": null
+            }
+            """;
+
+    /** The reference input with the {@code address} member removed. */
+    private static final String PRODUCT_DOCUMENT_WITHOUT_ADDRESS = """
+            {
+              "id": 1,
+              "name": "widget",
+              "price": 9.5,
+              "active": true,
+              "first name": "x",
+              "tags": ["a", "b"],
+              "items": [
+                {"sku": "s1", "qty": 2, "note": null, "attrs": {"color": "red"}},
+                {"sku": "s2", "qty": 2.5, "note": "x", "price": 1.5, "attrs": {"size": 3}}
+              ],
+              "translations": {"en": {"text": "Hello", "plural": false}, "de": {"text": "Hallo"}},
+              "none": null
+            }
+            """;
+
+    private static final String JAVA_PLUGINS_BLOCK = """
+            plugins {
+                java
+                id("io.github.pgatzka.json-pojo-gen")
+            }
+            repositories { mavenCentral() }
+            dependencies { implementation("com.fasterxml.jackson.core:jackson-annotations:2.22") }
+            """;
+
+    /** Kotlin DSL: {@code \$} escapes the dollar sign inside a Kotlin string literal. */
+    private static final String CODEGEN_EXTENSION_BLOCK = """
+            jsonPojoGen {
+                inputFile.set(file("product.json"))
+                mapPaths.add("\\$.translations")
+                mapPaths.add("\\$.items[*].attrs")
+                packageName.set("com.acme.model")
+            }
+            """;
+
+    private static final String CODEGEN_BUILD_SCRIPT = JAVA_PLUGINS_BLOCK + CODEGEN_EXTENSION_BLOCK;
+
+    private static final String CODEGEN_WITHOUT_JAVA_BUILD_SCRIPT = """
+            plugins {
+                id("io.github.pgatzka.json-pojo-gen")
+            }
+            """ + CODEGEN_EXTENSION_BLOCK;
+
+    private static final String CODEGEN_WITHOUT_PACKAGE_BUILD_SCRIPT = JAVA_PLUGINS_BLOCK + """
+            jsonPojoGen {
+                inputFile.set(file("product.json"))
+                mapPaths.add("\\$.translations")
+                mapPaths.add("\\$.items[*].attrs")
+            }
+            """;
+
+    private static final String CODEGEN_FLAGS_OFF_BUILD_SCRIPT = JAVA_PLUGINS_BLOCK + """
+            jsonPojoGen {
+                inputFile.set(file("product.json"))
+                mapPaths.add("\\$.translations")
+                mapPaths.add("\\$.items[*].attrs")
+                packageName.set("com.acme.model")
+                generateEqualsAndHashCode.set(false)
+                generateToString.set(false)
+            }
+            """;
+
+    private static final List<String> GENERATED_CLASS_NAMES = List.of("Product", "Address", "Item", "Translation");
+
+    private void writeCodegenProject(String buildScript, String productJson) throws IOException {
+        Files.writeString(projectDir.resolve("settings.gradle.kts"), "", StandardCharsets.UTF_8);
+        Files.writeString(projectDir.resolve("build.gradle.kts"), buildScript, StandardCharsets.UTF_8);
+        Files.writeString(projectDir.resolve("product.json"), productJson, StandardCharsets.UTF_8);
+    }
+
+    private GradleRunner runner(String... arguments) {
+        return GradleRunner.create()
+                .forwardOutput()
+                .withPluginClasspath()
+                .withArguments(arguments)
+                .withProjectDir(projectDir.toFile());
+    }
+
+    private Path generatedPackageDir() {
+        return projectDir.resolve("build/generated/sources/jsonPojoGen/java/main/com/acme/model");
+    }
+
+    private Path compiledPackageDir() {
+        return projectDir.resolve("build/classes/java/main/com/acme/model");
+    }
+
+    private static void assertOutcome(BuildResult result, String taskPath, TaskOutcome expected) {
+        BuildTask task = result.task(taskPath);
+        assertThat(task).as(taskPath).isNotNull();
+        assertThat(task.getOutcome()).as(taskPath).isEqualTo(expected);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 9: compileJava runs generateJsonPojos and compileJava with SUCCESS")
+    void compileJava_referenceProject_bothTasksSucceed() throws IOException {
+        writeCodegenProject(CODEGEN_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+
+        BuildResult result = runner("compileJava").build();
+
+        assertOutcome(result, ":generateJsonPojos", TaskOutcome.SUCCESS);
+        assertOutcome(result, ":compileJava", TaskOutcome.SUCCESS);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 9: compileJava generates the four sources and compiles the four classes")
+    void compileJava_referenceProject_writesSourcesAndClasses() throws IOException {
+        writeCodegenProject(CODEGEN_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+
+        runner("compileJava").build();
+
+        for (String name : GENERATED_CLASS_NAMES) {
+            assertThat(generatedPackageDir().resolve(name + ".java")).isRegularFile();
+            assertThat(compiledPackageDir().resolve(name + ".class")).isRegularFile();
+        }
+    }
+
+    @Test
+    @DisplayName("generate-pojos API: generateJsonPojos logs 'Generated 4 Java file(s) into <dir>'")
+    void generateJsonPojos_logsLifecycleLine() throws IOException {
+        writeCodegenProject(CODEGEN_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+
+        BuildResult result = runner("generateJsonPojos").build();
+
+        assertThat(result.getOutput()).contains("Generated 4 Java file(s) into ");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 10: a second compileJava without changes is UP-TO-DATE for generateJsonPojos")
+    void compileJava_secondRunWithoutChanges_generateIsUpToDate() throws IOException {
+        writeCodegenProject(CODEGEN_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+        runner("compileJava").build();
+
+        BuildResult second = runner("compileJava").build();
+
+        assertOutcome(second, ":generateJsonPojos", TaskOutcome.UP_TO_DATE);
+    }
+
+    @Test
+    @DisplayName("generate-pojos 11: removing 'address' regenerates and removes Address.java and Address.class")
+    void compileJava_afterRemovingAddress_removesStaleSourceAndClass() throws IOException {
+        writeCodegenProject(CODEGEN_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+        runner("compileJava").build();
+        assertThat(generatedPackageDir().resolve("Address.java")).isRegularFile();
+        assertThat(compiledPackageDir().resolve("Address.class")).isRegularFile();
+
+        Files.writeString(projectDir.resolve("product.json"), PRODUCT_DOCUMENT_WITHOUT_ADDRESS, StandardCharsets.UTF_8);
+        BuildResult second = runner("compileJava").build();
+
+        assertOutcome(second, ":generateJsonPojos", TaskOutcome.SUCCESS);
+        assertThat(generatedPackageDir().resolve("Address.java")).doesNotExist();
+        assertThat(compiledPackageDir().resolve("Address.class")).doesNotExist();
+        assertThat(generatedPackageDir().resolve("Product.java")).isRegularFile();
+    }
+
+    @Test
+    @DisplayName("generate-pojos 12: without the java plugin generateJsonPojos succeeds and writes the four files")
+    void generateJsonPojos_withoutJavaPlugin_succeedsAndWritesFiles() throws IOException {
+        writeCodegenProject(CODEGEN_WITHOUT_JAVA_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+
+        BuildResult result = runner("generateJsonPojos").build();
+
+        assertOutcome(result, ":generateJsonPojos", TaskOutcome.SUCCESS);
+        for (String name : GENERATED_CLASS_NAMES) {
+            assertThat(generatedPackageDir().resolve(name + ".java")).isRegularFile();
+        }
+    }
+
+    @Test
+    @DisplayName("generate-pojos 13: without packageName generateJsonPojos fails mentioning property 'packageName'")
+    void generateJsonPojos_withoutPackageName_fails() throws IOException {
+        writeCodegenProject(CODEGEN_WITHOUT_PACKAGE_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+
+        BuildResult result = runner("generateJsonPojos").buildAndFail();
+
+        assertThat(result.getOutput()).contains("property 'packageName'");
+    }
+
+    @Test
+    @DisplayName("generate-pojos 14: with both flags off Address.java has no equals(, hashCode( or toString(")
+    void generateJsonPojos_flagsOff_addressHasNoEqualsHashCodeToString() throws IOException {
+        writeCodegenProject(CODEGEN_FLAGS_OFF_BUILD_SCRIPT, PRODUCT_DOCUMENT);
+
+        BuildResult result = runner("generateJsonPojos").build();
+
+        assertOutcome(result, ":generateJsonPojos", TaskOutcome.SUCCESS);
+        String address = Files.readString(generatedPackageDir().resolve("Address.java"), StandardCharsets.UTF_8);
+        assertThat(address)
+                .doesNotContain("equals(")
+                .doesNotContain("hashCode(")
+                .doesNotContain("toString(");
+    }
 }

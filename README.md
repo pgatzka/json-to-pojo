@@ -83,6 +83,60 @@ For `{"translations": {"en": {"text": "Hello"}, "de": {"text": "Hallo"}}}` this 
 task would otherwise print, and it must point to an object (or `null`); otherwise the build fails with
 `Map path error for <file>`.
 
+## Generating POJOs
+
+With the `java` plugin applied, `generateJsonPojos` writes one mutable POJO per JSON object into
+`build/generated/sources/jsonPojoGen/java/main` and adds that directory to the `main` source set, so `compileJava`
+compiles them. Only `packageName` is required:
+
+```kotlin
+plugins {
+    java
+    id("io.github.pgatzka.json-pojo-gen")
+}
+
+dependencies {
+    implementation("com.fasterxml.jackson.core:jackson-annotations:2.22") // only needed for @JsonProperty
+}
+
+jsonPojoGen {
+    inputFile.set(file("product.json"))
+    mapPaths.add("\$.translations")
+    packageName.set("com.acme.model")
+    rootClassName.set("Product")               // default: the file name in UpperCamelCase (product.json -> Product)
+    classNames.put("\$.items[*]", "LineItem")  // override a derived class name
+    generateEqualsAndHashCode.set(true)        // default true
+    generateToString.set(true)                 // default true
+}
+```
+
+For `{"id": 1, "items": [{"sku": "s1"}, {"sku": "s2", "qty": 2.5}], "translations": {"en": {"text": "Hi"}}}` this
+produces `Product`, `LineItem` and `Translation`:
+
+```java
+public class Product {
+    private long id;                              // integer, always present -> primitive
+    private List<LineItem> items;                 // [*] -> List
+    private Map<String, Translation> translations; // map path -> Map
+    // no-arg constructor, getters, setters, equals/hashCode, toString
+}
+
+public class LineItem {
+    private String sku;
+    private Double qty;                           // missing in one element -> optional -> boxed
+}
+```
+
+Mapping rules:
+
+- `integer`, `float`, `boolean` become `long`, `double`, `boolean` when the member is always present and never null,
+  otherwise `Long`, `Double`, `Boolean`. `string` is `String`, a `null`-only path is `Object`.
+- Class names come from the key, singularized under `[*]` and `.*` (`items` → `Item`, `addresses` → `Address`).
+  Two objects that would get the same name fail the build; disambiguate with `classNames`.
+- A key that is not a Java identifier becomes a camelCase field; whenever Jackson's getter-derived name differs from
+  the key, the getter and setter carry `@JsonProperty("<key>")`.
+- Reserved names (`Object`, `String`, `List`, `Map`, …) and empty keys fail the build with a message naming the path.
+
 ## Build and test
 
 ```sh
