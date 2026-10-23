@@ -14,8 +14,10 @@ Decisions made here (user chose: publish on every push to `main`; SonarCloud):
 - The Sonar step is skipped when the `SONAR_TOKEN` secret is absent (also true for pull requests from forks), so CI is green
   before the SonarCloud project exists. `fetch-depth: 0` so Sonar can compute new code.
 - Test and coverage reports are uploaded as an artifact only when the build fails.
-- Action versions are pinned to major tags: `actions/checkout@v5`, `actions/setup-java@v5`, `gradle/actions/setup-gradle@v5`,
-  `actions/upload-artifact@v4`.
+- GitHub-owned actions are pinned to major tags: `actions/checkout@v5`, `actions/setup-java@v5`, `actions/upload-artifact@v4`.
+  The third-party `gradle/actions/setup-gradle` is pinned to the full commit SHA of its `v5.0.2` tag
+  (`0723195856401067f7a2779048b490ace7a47d7c`) with the version in a trailing comment, because SonarCloud rule
+  `githubactions:S7637` rates a tag-pinned third-party action as a vulnerability and fails the quality gate.
 - Workflow-level `permissions: contents: read`; the `publish` job adds `packages: write`.
 
 ## Package and class names
@@ -68,7 +70,7 @@ jobs:
           java-version: 25
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
       - name: Check (tests, formatting, coverage)
         run: ./gradlew check
@@ -106,7 +108,7 @@ jobs:
           java-version: 25
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
+        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
 
       - name: Publish
         env:
@@ -130,6 +132,8 @@ GitHub Actions cannot run locally; the criteria are checked by reading the file 
    `./gradlew publish` with `GITHUB_ACTOR` and `GITHUB_TOKEN` in its environment.
 7. Workflow-level permissions are read-only (`contents: read`).
 8. No other workflow files are added; no secrets other than `SONAR_TOKEN` and the built-in `GITHUB_TOKEN` are referenced.
+9. Both `gradle/actions/setup-gradle` steps reference the 40-character commit SHA `0723195856401067f7a2779048b490ace7a47d7c`
+   followed by the comment `# v5.0.2`; no `@v5` tag reference to that action remains.
 
 ## Edge cases and error handling
 
