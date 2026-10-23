@@ -10,10 +10,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
-
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
+import org.gradle.work.DisableCachingByDefault;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,13 +28,16 @@ class ListJsonPathsTaskTest {
 
     private Project newProjectWithPlugin() throws IOException {
         Path projectDir = Files.createDirectories(tempDir.resolve("project"));
-        Project project = ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
+        Project project =
+                ProjectBuilder.builder().withProjectDir(projectDir.toFile()).build();
         project.getPlugins().apply(JsonPojoGenPlugin.class);
         return project;
     }
 
     private static ListJsonPathsTask task(Project project) {
-        return project.getTasks().named(ListJsonPathsTask.NAME, ListJsonPathsTask.class).get();
+        return project.getTasks()
+                .named(ListJsonPathsTask.NAME, ListJsonPathsTask.class)
+                .get();
     }
 
     private static JsonPojoGenExtension extension(Project project) {
@@ -214,7 +217,8 @@ class ListJsonPathsTaskTest {
 
         assertThatThrownBy(task::listPaths)
                 .isInstanceOf(GradleException.class)
-                .hasMessageStartingWith("Map path error for " + input.getAbsolutePath() + ": Map path $.nope not found");
+                .hasMessageStartingWith(
+                        "Map path error for " + input.getAbsolutePath() + ": Map path $.nope not found");
     }
 
     @Test
@@ -308,8 +312,8 @@ class ListJsonPathsTaskTest {
 
         assertThatThrownBy(task::listPaths)
                 .isInstanceOf(GradleException.class)
-                .hasMessageStartingWith("Type conflict in " + input.getAbsolutePath()
-                        + ": Conflicting types at $[*]: object, array")
+                .hasMessageStartingWith(
+                        "Type conflict in " + input.getAbsolutePath() + ": Conflicting types at $[*]: object, array")
                 .cause()
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Conflicting types at $[*]: object, array");
@@ -342,5 +346,18 @@ class ListJsonPathsTaskTest {
         task.getMapPaths().set(Set.of("$.m"));
 
         assertThatCode(task::listPaths).doesNotThrowAnyException();
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // build-tooling (docs/specs/build-tooling.md)
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("build-tooling 9: class carries @DisableCachingByDefault with a non-blank reason")
+    void class_isAnnotatedDisableCachingByDefaultWithReason() {
+        DisableCachingByDefault annotation = ListJsonPathsTask.class.getAnnotation(DisableCachingByDefault.class);
+
+        assertThat(annotation).isNotNull();
+        assertThat(annotation.because()).isNotBlank();
     }
 }

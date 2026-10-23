@@ -14,8 +14,7 @@ public abstract class JsonPojoGenExtension {
     /**
      * Creates the extension; Gradle instantiates it as a managed object.
      */
-    public JsonPojoGenExtension() {
-    }
+    public JsonPojoGenExtension() {}
 
     /**
      * Returns the JSON file to process.

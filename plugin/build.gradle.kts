@@ -8,6 +8,9 @@
 plugins {
     // Apply the Java Gradle plugin development plugin to add support for developing Gradle plugins
     `java-gradle-plugin`
+    `maven-publish`
+    jacoco
+    alias(libs.plugins.spotless)
 }
 
 repositories {
@@ -18,6 +21,48 @@ repositories {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
+    }
+    withSourcesJar()
+}
+
+base {
+    archivesName = "json-pojo-gen"
+}
+
+jacoco {
+    toolVersion = libs.versions.jacoco.get()
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+        palantirJavaFormat(libs.versions.palantir.java.format.get())
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        if (name == "pluginMaven") {
+            artifactId = "json-pojo-gen"
+        }
+        pom {
+            name = "json-pojo-gen"
+            description = "Gradle plugin that generates Java POJOs from JSON."
+            url = "https://github.com/pgatzka/json-to-pojo"
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/pgatzka/json-to-pojo")
+            credentials {
+                username = providers.environmentVariable("GITHUB_ACTOR").orNull
+                password = providers.environmentVariable("GITHUB_TOKEN").orNull
+            }
+        }
     }
 }
 
@@ -63,4 +108,13 @@ tasks.named<Task>("check") {
 tasks.named<Test>("test") {
     // Use JUnit Jupiter for unit tests.
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }

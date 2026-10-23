@@ -45,8 +45,7 @@ class TypedJsonPathTest {
     @Test
     @DisplayName("7: different type makes TypedJsonPath unequal")
     void equals_differentType_areNotEqual() {
-        assertThat(new TypedJsonPath("$.id", JsonType.INTEGER))
-                .isNotEqualTo(new TypedJsonPath("$.id", JsonType.FLOAT));
+        assertThat(new TypedJsonPath("$.id", JsonType.INTEGER)).isNotEqualTo(new TypedJsonPath("$.id", JsonType.FLOAT));
     }
 
     @Test
@@ -68,14 +67,12 @@ class TypedJsonPathTest {
     @Test
     @DisplayName("Edge: null path throws NullPointerException")
     void constructor_nullPath_throwsNullPointerException() {
-        assertThatThrownBy(() -> new TypedJsonPath(null, JsonType.NULL))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new TypedJsonPath(null, JsonType.NULL)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     @DisplayName("Edge: null type throws NullPointerException")
     void constructor_nullType_throwsNullPointerException() {
-        assertThatThrownBy(() -> new TypedJsonPath("$.a", null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new TypedJsonPath("$.a", null)).isInstanceOf(NullPointerException.class);
     }
 }

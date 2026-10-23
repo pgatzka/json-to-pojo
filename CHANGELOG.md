@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub Actions workflow `CI`: on pushes to `main` and pull requests it runs `./gradlew check` on Temurin 25, runs the
+  Sonar analysis when `SONAR_TOKEN` is configured, uploads reports on failure, and on `main` publishes the snapshot to
+  GitHub Packages. Spec: `docs/specs/github-actions-ci.md`.
+- Build tooling: Spotless (Palantir Java Format) formatting check as part of `check`, JaCoCo XML coverage report,
+  `org.sonarqube` plugin targeting SonarCloud (`pgatzka_json-to-pojo`), and `maven-publish` to GitHub Packages as
+  `io.github.pgatzka:json-pojo-gen:0.1.0-SNAPSHOT` with a sources jar. `ListJsonPathsTask` is annotated
+  `@DisableCachingByDefault`. Spec: `docs/specs/build-tooling.md`.
 - Every listed path carries a type (`float`, `integer`, `string`, `boolean`, `object`, `array`, `null`) via the new
   `JsonType` enum and `TypedJsonPath` record. Merged values merge their types: `null` loses, `integer` + `float` gives
   `float`, other scalar mixes give `string`, and a container mixed with another type fails the build with
@@ -31,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `implementer` agent may now edit `settings.gradle.kts`, `plugin/build.gradle.kts` and `gradle/libs.versions.toml`
   whenever a spec spells out the build-script change (plugin, toolchain or dependency), not only for a new dependency.
+- The `implementer` agent may also write CI configuration under `.github/**` when a spec spells it out; the
+  `agent-guard` hook enforces this.
 - Moved the scaffold plugin from package `org.example` to `io.github.pgatzka`; plugin id is now
   `io.github.pgatzka.json-pojo-gen` (was `org.example.greeting`). The `greeting` task is unchanged apart from the id it prints.
   Spec: `docs/specs/package-migration.md`.

@@ -36,8 +36,8 @@ public final class JsonPathLister {
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
 
     // Trailing tokens after the root value would otherwise be silently ignored and hide malformed input.
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+    private static final ObjectMapper MAPPER =
+            new ObjectMapper().enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
     private JsonPathLister() {
         throw new AssertionError("No instances");
@@ -203,8 +203,8 @@ public final class JsonPathLister {
         seen.computeIfAbsent(path, p -> new LinkedHashSet<>()).add(typeOf(node));
     }
 
-    private static void visit(JsonNode node, String path, Map<String, Set<JsonType>> seen, Set<String> mapPaths,
-            Set<String> matched) {
+    private static void visit(
+            JsonNode node, String path, Map<String, Set<JsonType>> seen, Set<String> mapPaths, Set<String> matched) {
         if (mapPaths.contains(path)) {
             matched.add(path);
             if (node.isNull()) {

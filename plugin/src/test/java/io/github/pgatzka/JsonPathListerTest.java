@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -170,15 +169,10 @@ class JsonPathListerTest {
     @Test
     @DisplayName("5: non-identifier keys use escaped bracket notation")
     void listPaths_nonIdentifierKeys_useBracketNotation() {
-        List<String> paths = pathsOf(JsonPathLister.listPaths(
-                "{\"first name\":1,\"it's\":2,\"a\\\\b\":3,\"\":4,\"_ok9\":5}"));
+        List<String> paths =
+                pathsOf(JsonPathLister.listPaths("{\"first name\":1,\"it's\":2,\"a\\\\b\":3,\"\":4,\"_ok9\":5}"));
 
-        assertThat(paths).containsExactly(
-                "$['first name']",
-                "$['it\\'s']",
-                "$['a\\\\b']",
-                "$['']",
-                "$._ok9");
+        assertThat(paths).containsExactly("$['first name']", "$['it\\'s']", "$['a\\\\b']", "$['']", "$._ok9");
     }
 
     @Test
@@ -268,15 +262,13 @@ class JsonPathListerTest {
     @Test
     @DisplayName("Edge: null string throws NullPointerException")
     void listPaths_nullString_throwsNullPointerException() {
-        assertThatThrownBy(() -> JsonPathLister.listPaths((String) null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> JsonPathLister.listPaths((String) null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
     @DisplayName("Edge: null path throws NullPointerException")
     void listPaths_nullPath_throwsNullPointerException() {
-        assertThatThrownBy(() -> JsonPathLister.listPaths((Path) null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> JsonPathLister.listPaths((Path) null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -341,8 +333,7 @@ class JsonPathListerTest {
     void listPathsFromFile_missingFile_throwsIOException() {
         Path missing = tempDir.resolve("does-not-exist.json");
 
-        assertThatThrownBy(() -> JsonPathLister.listPaths(missing))
-                .isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> JsonPathLister.listPaths(missing)).isInstanceOf(IOException.class);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -363,8 +354,11 @@ class JsonPathListerTest {
     void listPathsWithMapPaths_referenceDocument_omitsMemberNames() {
         List<String> paths = pathsOf(JsonPathLister.listPaths(MAP_REFERENCE_DOCUMENT, MAP_REFERENCE_MAP_PATHS));
 
-        assertThat(paths).noneMatch(path -> path.contains(".en") || path.contains(".de")
-                || path.contains(".color") || path.contains(".size"));
+        assertThat(paths)
+                .noneMatch(path -> path.contains(".en")
+                        || path.contains(".de")
+                        || path.contains(".color")
+                        || path.contains(".size"));
     }
 
     @Test
@@ -408,8 +402,7 @@ class JsonPathListerTest {
     @DisplayName("map-paths 6: null value at a map path is tolerated")
     void listPathsWithMapPaths_nullNextToObject_isTolerated() {
         List<String> paths = pathsOf(JsonPathLister.listPaths(
-                "{\"items\":[{\"attrs\":{\"a\":1}},{\"attrs\":null}]}",
-                Set.of("$.items[*].attrs")));
+                "{\"items\":[{\"attrs\":{\"a\":1}},{\"attrs\":null}]}", Set.of("$.items[*].attrs")));
 
         assertThat(paths).containsExactly("$.items", "$.items[*]", "$.items[*].attrs", "$.items[*].attrs.*");
     }
@@ -455,9 +448,8 @@ class JsonPathListerTest {
     @Test
     @DisplayName("map-paths: first occurrence wins when merging map values")
     void listPathsWithMapPaths_mergedValues_firstOccurrenceWins() {
-        List<String> paths = pathsOf(JsonPathLister.listPaths(
-                "{\"m\":{\"k1\":{\"b\":1,\"a\":2},\"k2\":{\"a\":3,\"c\":4}}}",
-                Set.of("$.m")));
+        List<String> paths = pathsOf(
+                JsonPathLister.listPaths("{\"m\":{\"k1\":{\"b\":1,\"a\":2},\"k2\":{\"a\":3,\"c\":4}}}", Set.of("$.m")));
 
         assertThat(paths).containsExactly("$.m", "$.m.*", "$.m.*.b", "$.m.*.a", "$.m.*.c");
     }
@@ -474,8 +466,7 @@ class JsonPathListerTest {
     @Test
     @DisplayName("map-paths Edge: null map paths with a string throws NullPointerException")
     void listPathsWithMapPaths_nullMapPaths_throwsNullPointerException() {
-        assertThatThrownBy(() -> JsonPathLister.listPaths("{}", null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> JsonPathLister.listPaths("{}", null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -484,8 +475,7 @@ class JsonPathListerTest {
         Path file = tempDir.resolve("npe.json");
         Files.writeString(file, "{}", StandardCharsets.UTF_8);
 
-        assertThatThrownBy(() -> JsonPathLister.listPaths(file, null))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> JsonPathLister.listPaths(file, null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -507,8 +497,7 @@ class JsonPathListerTest {
     void listPathsWithMapPaths_setContainingNull_throwsNullPointerException() {
         Set<String> withNull = new HashSet<>(Arrays.asList((String) null));
 
-        assertThatThrownBy(() -> JsonPathLister.listPaths("{}", withNull))
-                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> JsonPathLister.listPaths("{}", withNull)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -573,8 +562,7 @@ class JsonPathListerTest {
     @Test
     @DisplayName("map-paths Edge: map path matched only by a member name of a map is not found")
     void listPathsWithMapPaths_pathThroughCollapsedMap_throwsNotFound() {
-        assertThatThrownBy(() -> JsonPathLister.listPaths(
-                "{\"m\":{\"k\":{\"x\":1}}}", Set.of("$.m", "$.m.k")))
+        assertThatThrownBy(() -> JsonPathLister.listPaths("{\"m\":{\"k\":{\"x\":1}}}", Set.of("$.m", "$.m.k")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageStartingWith("Map path $.m.k not found");
     }
@@ -685,19 +673,20 @@ class JsonPathListerTest {
                 "{\"a\":1,\"b\":1.0,\"c\":-7,\"d\":2.5e3,\"e\":\"x\",\"f\":false,\"g\":null,\"h\":[],\"i\":{},"
                         + "\"j\":12345678901234567890}");
 
-        assertThat(pathsOf(typedPaths)).containsExactly(
-                "$.a", "$.b", "$.c", "$.d", "$.e", "$.f", "$.g", "$.h", "$.i", "$.j");
-        assertThat(typesOf(typedPaths)).containsExactly(
-                JsonType.INTEGER,
-                JsonType.FLOAT,
-                JsonType.INTEGER,
-                JsonType.FLOAT,
-                JsonType.STRING,
-                JsonType.BOOLEAN,
-                JsonType.NULL,
-                JsonType.ARRAY,
-                JsonType.OBJECT,
-                JsonType.INTEGER);
+        assertThat(pathsOf(typedPaths))
+                .containsExactly("$.a", "$.b", "$.c", "$.d", "$.e", "$.f", "$.g", "$.h", "$.i", "$.j");
+        assertThat(typesOf(typedPaths))
+                .containsExactly(
+                        JsonType.INTEGER,
+                        JsonType.FLOAT,
+                        JsonType.INTEGER,
+                        JsonType.FLOAT,
+                        JsonType.STRING,
+                        JsonType.BOOLEAN,
+                        JsonType.NULL,
+                        JsonType.ARRAY,
+                        JsonType.OBJECT,
+                        JsonType.INTEGER);
     }
 
     @Test
@@ -727,9 +716,8 @@ class JsonPathListerTest {
     @Test
     @DisplayName("typed 3: null next to an object yields object and the object's children")
     void listPaths_nullThenObject_isObjectWithChildren() {
-        assertThat(JsonPathLister.listPaths("[null,{\"x\":1}]")).containsExactly(
-                typed("$[*]", JsonType.OBJECT),
-                typed("$[*].x", JsonType.INTEGER));
+        assertThat(JsonPathLister.listPaths("[null,{\"x\":1}]"))
+                .containsExactly(typed("$[*]", JsonType.OBJECT), typed("$[*].x", JsonType.INTEGER));
     }
 
     @Test
@@ -796,18 +784,14 @@ class JsonPathListerTest {
     @DisplayName("typed 6: map values integer, float, null merge to float")
     void listPathsWithMapPaths_mapValuesIntegerFloatNull_isFloat() {
         assertThat(JsonPathLister.listPaths("{\"m\":{\"a\":1,\"b\":2.5,\"c\":null}}", Set.of("$.m")))
-                .containsExactly(
-                        typed("$.m", JsonType.OBJECT),
-                        typed("$.m.*", JsonType.FLOAT));
+                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.FLOAT));
     }
 
     @Test
     @DisplayName("typed 6: map values integer and boolean merge to string")
     void listPathsWithMapPaths_mapValuesIntegerBoolean_isString() {
         assertThat(JsonPathLister.listPaths("{\"m\":{\"a\":1,\"b\":true}}", Set.of("$.m")))
-                .containsExactly(
-                        typed("$.m", JsonType.OBJECT),
-                        typed("$.m.*", JsonType.STRING));
+                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.STRING));
     }
 
     @Test
@@ -817,17 +801,14 @@ class JsonPathListerTest {
         Files.writeString(file, "{\"m\":{\"a\":1,\"b\":2.5,\"c\":null}}", StandardCharsets.UTF_8);
 
         assertThat(JsonPathLister.listPaths(file, Set.of("$.m")))
-                .containsExactly(
-                        typed("$.m", JsonType.OBJECT),
-                        typed("$.m.*", JsonType.FLOAT));
+                .containsExactly(typed("$.m", JsonType.OBJECT), typed("$.m.*", JsonType.FLOAT));
     }
 
     @Test
     @DisplayName("typed 6: null value at a map path loses against the object")
     void listPathsWithMapPaths_nullNextToObjectAtMapPath_isObject() {
         assertThat(JsonPathLister.listPaths(
-                "{\"items\":[{\"attrs\":{\"a\":1}},{\"attrs\":null}]}",
-                Set.of("$.items[*].attrs")))
+                        "{\"items\":[{\"attrs\":{\"a\":1}},{\"attrs\":null}]}", Set.of("$.items[*].attrs")))
                 .containsExactly(
                         typed("$.items", JsonType.ARRAY),
                         typed("$.items[*]", JsonType.OBJECT),
@@ -845,27 +826,28 @@ class JsonPathListerTest {
     @Test
     @DisplayName("typed: a path keeps the position of its first occurrence when a later node decides its type")
     void listPaths_laterNodeDecidesType_keepsFirstOccurrencePosition() {
-        assertThat(JsonPathLister.listPaths("[{\"a\":null},{\"b\":1,\"a\":\"s\"}]")).containsExactly(
-                typed("$[*]", JsonType.OBJECT),
-                typed("$[*].a", JsonType.STRING),
-                typed("$[*].b", JsonType.INTEGER));
+        assertThat(JsonPathLister.listPaths("[{\"a\":null},{\"b\":1,\"a\":\"s\"}]"))
+                .containsExactly(
+                        typed("$[*]", JsonType.OBJECT),
+                        typed("$[*].a", JsonType.STRING),
+                        typed("$[*].b", JsonType.INTEGER));
     }
 
     @Test
     @DisplayName("typed: children of an object are listed even when the object is preceded by null")
     void listPaths_nullThenObjectMember_listsChildren() {
-        assertThat(JsonPathLister.listPaths("[{\"a\":null},{\"a\":{\"x\":1}}]")).containsExactly(
-                typed("$[*]", JsonType.OBJECT),
-                typed("$[*].a", JsonType.OBJECT),
-                typed("$[*].a.x", JsonType.INTEGER));
+        assertThat(JsonPathLister.listPaths("[{\"a\":null},{\"a\":{\"x\":1}}]"))
+                .containsExactly(
+                        typed("$[*]", JsonType.OBJECT),
+                        typed("$[*].a", JsonType.OBJECT),
+                        typed("$[*].a.x", JsonType.INTEGER));
     }
 
     @Test
     @DisplayName("typed Edge: nested arrays merge their element types")
     void listPaths_nestedArrays_mergeElementTypes() {
-        assertThat(JsonPathLister.listPaths("[[1],[2.5]]")).containsExactly(
-                typed("$[*]", JsonType.ARRAY),
-                typed("$[*][*]", JsonType.FLOAT));
+        assertThat(JsonPathLister.listPaths("[[1],[2.5]]"))
+                .containsExactly(typed("$[*]", JsonType.ARRAY), typed("$[*][*]", JsonType.FLOAT));
     }
 
     @Test
@@ -945,7 +927,6 @@ class JsonPathListerTest {
 
         assertThatThrownBy(() -> typedPaths.add(typed("$.x", JsonType.STRING)))
                 .isInstanceOf(UnsupportedOperationException.class);
-        assertThatThrownBy(() -> typedPaths.remove(0))
-                .isInstanceOf(UnsupportedOperationException.class);
+        assertThatThrownBy(() -> typedPaths.remove(0)).isInstanceOf(UnsupportedOperationException.class);
     }
 }

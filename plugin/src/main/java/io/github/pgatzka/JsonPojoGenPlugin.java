@@ -14,8 +14,7 @@ public class JsonPojoGenPlugin implements Plugin<Project> {
     /**
      * Creates the plugin; Gradle instantiates it reflectively.
      */
-    public JsonPojoGenPlugin() {
-    }
+    public JsonPojoGenPlugin() {}
 
     /**
      * Creates the {@code jsonPojoGen} extension and registers the {@code listJsonPaths} task on the given project.

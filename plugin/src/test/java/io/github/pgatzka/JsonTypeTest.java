@@ -13,14 +13,15 @@ class JsonTypeTest {
     @Test
     @DisplayName("typed-json-paths: enum declares exactly the seven types in spec order")
     void values_areTheSevenTypesInOrder() {
-        assertThat(JsonType.values()).containsExactly(
-                JsonType.FLOAT,
-                JsonType.INTEGER,
-                JsonType.STRING,
-                JsonType.BOOLEAN,
-                JsonType.OBJECT,
-                JsonType.ARRAY,
-                JsonType.NULL);
+        assertThat(JsonType.values())
+                .containsExactly(
+                        JsonType.FLOAT,
+                        JsonType.INTEGER,
+                        JsonType.STRING,
+                        JsonType.BOOLEAN,
+                        JsonType.OBJECT,
+                        JsonType.ARRAY,
+                        JsonType.NULL);
     }
 
     @Test

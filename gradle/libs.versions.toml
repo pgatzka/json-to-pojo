@@ -5,8 +5,16 @@
 junit-jupiter = "6.0.1"
 assertj = "3.27.3"
 jackson = "2.22.4"
+palantir-java-format = "2.102.0"
+jacoco = "0.8.15"
+spotless = "8.10.4"
+sonarqube = "7.5.0.8588"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+
+[plugins]
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

@@ -10,9 +10,10 @@ Roles enforced (see .claude/hooks/README.md for the full matrix):
 
   test-writer   may read docs/specs, test source sets and build scripts; may write
                 only under src/test* source sets; must never see src/main.
-  implementer   may read docs/specs, src/main and build scripts; may write only
-                under src/main (plus build scripts); must never see any test
-                source set. Shell is limited to ./gradlew.
+  implementer   may read docs/specs, src/main, build scripts and .github; may write
+                only under src/main (plus build scripts and .github/** when a spec
+                spells out the change); must never see any test source set.
+                Shell is limited to ./gradlew.
   reviewer      read-only: no Edit/Write; shell limited to ./gradlew and read-only git.
   main / other  may edit only docs/specs/**, README.md, CHANGELOG.md, CLAUDE.md, .claude/**.
 
@@ -31,6 +32,8 @@ RESTRICTED = {"test-writer", "implementer", "reviewer"}
 PROD_RE = re.compile(r"(^|/)src/main(/|$)")
 TEST_RE = re.compile(r"(^|/)src/(test|[a-z0-9_\-]*test)(/|$)")
 BUILD_SCRIPT_RE = re.compile(r"(^|/)([a-z0-9_\-]+\.gradle(\.kts)?|gradle/libs\.versions\.toml|gradle\.properties)$")
+# CI configuration (GitHub Actions workflows etc.) is build infrastructure owned by the implementer.
+CI_RE = re.compile(r"^\.github(/.*)?$")
 DOCS_RE = re.compile(r"^(docs/specs/[^/]+\.md|readme\.md|changelog\.md|claude\.md|\.claude(/.*)?)$")
 
 # Text patterns for shell commands (Bash and PowerShell tools).
@@ -288,8 +291,8 @@ def decide(data):
                 agent, tool, ti, root, cwd,
                 forbidden_re=TEST_RE,
                 forbidden_name="test sources (src/test, src/functionalTest)",
-                write_ok_re=re.compile(f"(?:{PROD_RE.pattern})|(?:{BUILD_SCRIPT_RE.pattern})"),
-                write_hint="implementer may write only under plugin/src/main (and build scripts when the spec requires a dependency).",
+                write_ok_re=re.compile(f"(?:{PROD_RE.pattern})|(?:{BUILD_SCRIPT_RE.pattern})|(?:{CI_RE.pattern})"),
+                write_hint="implementer may write only under plugin/src/main (and build scripts or .github/** when the spec spells out the change).",
                 search_hint="Read the Gradle failure output instead. Set `path` to docs/specs or plugin/src/main.",
             )
         if tool in HARMLESS_TOOLS:
