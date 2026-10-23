@@ -224,4 +224,66 @@ class JsonPojoGenPluginTest {
         assertThat(project.getTasks().getByName("listJsonPaths").getDescription())
                 .isEqualTo("Logs the JSON paths found in the configured input file.");
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // map-paths (docs/specs/map-paths.md)
+    // ---------------------------------------------------------------------------------------------
+
+    private static Project projectWithPlugin() {
+        Project project = ProjectBuilder.builder().build();
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+        return project;
+    }
+
+    private static JsonPojoGenExtension extensionOf(Project project) {
+        return project.getExtensions().getByType(JsonPojoGenExtension.class);
+    }
+
+    private static ListJsonPathsTask listJsonPathsTaskOf(Project project) {
+        return project.getTasks().named(ListJsonPathsTask.NAME, ListJsonPathsTask.class).get();
+    }
+
+    @Test
+    @DisplayName("map-paths 9: extension and task mapPaths are empty after applying the plugin")
+    void applyByClass_mapPathsEmptyByDefault() {
+        Project project = projectWithPlugin();
+
+        assertThat(extensionOf(project).getMapPaths()).isNotNull();
+        assertThat(extensionOf(project).getMapPaths().isPresent()).isTrue();
+        assertThat(extensionOf(project).getMapPaths().get()).isEmpty();
+        assertThat(listJsonPathsTaskOf(project).getMapPaths().get()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("map-paths 9: task mapPaths follows the extension's mapPaths")
+    void applyByClass_taskMapPathsConventionFollowsExtension() {
+        Project project = projectWithPlugin();
+
+        extensionOf(project).getMapPaths().add("$.m");
+
+        assertThat(listJsonPathsTaskOf(project).getMapPaths().get()).containsExactly("$.m");
+    }
+
+    @Test
+    @DisplayName("map-paths 9: setting task mapPaths overrides the extension value")
+    void applyByClass_explicitTaskMapPathsOverrideExtension() {
+        Project project = projectWithPlugin();
+        ListJsonPathsTask task = listJsonPathsTaskOf(project);
+
+        extensionOf(project).getMapPaths().add("$.m");
+        task.getMapPaths().set(Set.of("$.n"));
+
+        assertThat(task.getMapPaths().get()).containsExactly("$.n");
+    }
+
+    @Test
+    @DisplayName("map-paths 9: applying by id wires the mapPaths convention too")
+    void applyById_taskMapPathsConventionFollowsExtension() {
+        Project project = ProjectBuilder.builder().build();
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        extensionOf(project).getMapPaths().add("$.m");
+
+        assertThat(listJsonPathsTaskOf(project).getMapPaths().get()).containsExactly("$.m");
+    }
 }

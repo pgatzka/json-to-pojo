@@ -46,6 +46,25 @@ $.items[*].qty
 Keys that are not plain identifiers use bracket notation, e.g. `$['first name']`. The build fails with
 `Invalid JSON in <file>` when the file does not parse.
 
+### Objects that are maps
+
+Some objects are keyed by data rather than by field names, such as `"translations": {"en": {...}, "de": {...}}`.
+List their paths in `mapPaths` and the task collapses their members to `.*`, merging the values the same way it
+merges array elements:
+
+```kotlin
+jsonPojoGen {
+    inputFile.set(file("input.json"))
+    mapPaths.add("\$.translations")
+    mapPaths.add("\$.items[*].attrs")
+}
+```
+
+For `{"translations": {"en": {"text": "Hello"}, "de": {"text": "Hallo"}}}` this prints `$.translations`,
+`$.translations.*` and `$.translations.*.text` instead of one entry per language. A map path must match a path the
+task would otherwise print, and it must point to an object (or `null`); otherwise the build fails with
+`Map path error for <file>`.
+
 ## Build and test
 
 ```sh

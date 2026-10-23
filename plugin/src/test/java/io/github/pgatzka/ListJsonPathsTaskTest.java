@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -147,5 +148,122 @@ class ListJsonPathsTaskTest {
         task.getInputFile().set(tempDir.resolve("does-not-exist.json").toFile());
 
         assertThatThrownBy(task::listPaths).isInstanceOf(IOException.class);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // map-paths (docs/specs/map-paths.md)
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("map-paths: task mapPaths is never null and empty by default")
+    void mapPaths_emptyByDefault() throws IOException {
+        Project project = newProjectWithPlugin();
+
+        assertThat(task(project).getMapPaths()).isNotNull();
+        assertThat(task(project).getMapPaths().get()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("map-paths 12: listPaths with a map path completes without exception")
+    void listPaths_withMapPath_completesWithoutException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("map.json", "{\"a\":{\"b\":1}}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.a"));
+
+        assertThatCode(task::listPaths).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("map-paths 12: listPaths with a map path from the extension completes without exception")
+    void listPaths_withMapPathFromExtension_completesWithoutException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("map.json", "{\"a\":{\"b\":1}}");
+        extension(project).getInputFile().set(input);
+        extension(project).getMapPaths().add("$.a");
+
+        assertThatCode(task(project)::listPaths).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("map-paths Edge: unmatched map path throws GradleException naming the file")
+    void listPaths_unmatchedMapPath_throwsGradleException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "{\"a\":1}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.nope"));
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Map path error for ")
+                .hasMessageContaining(input.getAbsolutePath())
+                .hasMessageContaining("Map path $.nope not found")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("map-paths Edge: map path error message is file path, ': ', then the lister's message")
+    void listPaths_unmatchedMapPath_messageFormat() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "{\"a\":1}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.nope"));
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Map path error for " + input.getAbsolutePath() + ": Map path $.nope not found");
+    }
+
+    @Test
+    @DisplayName("map-paths Edge: map path to an array throws GradleException")
+    void listPaths_mapPathToArray_throwsGradleException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "{\"a\":[1]}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.a"));
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Map path error for ")
+                .hasMessageContaining(input.getAbsolutePath())
+                .hasMessageContaining("Map path $.a does not point to a JSON object")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("map-paths Edge: syntactically invalid map path throws GradleException")
+    void listPaths_invalidMapPathSyntax_throwsGradleException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "{\"items\":{\"a\":1}}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("items"));
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Map path error for ")
+                .hasMessageContaining(input.getAbsolutePath())
+                .hasMessageContaining("Invalid map path")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("map-paths Edge: invalid JSON with map paths still throws the unchanged Invalid JSON error")
+    void listPaths_invalidJsonWithMapPaths_throwsInvalidJsonGradleException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("broken.json", "{\"a\":");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.a"));
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Invalid JSON in ")
+                .hasMessageContaining(input.getAbsolutePath())
+                .hasCauseInstanceOf(IllegalArgumentException.class);
     }
 }

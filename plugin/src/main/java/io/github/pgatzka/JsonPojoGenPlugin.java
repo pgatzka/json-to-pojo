@@ -30,6 +30,7 @@ public class JsonPojoGenPlugin implements Plugin<Project> {
             task.setGroup(ListJsonPathsTask.GROUP);
             task.setDescription("Logs the JSON paths found in the configured input file.");
             task.getInputFile().convention(extension.getInputFile());
+            task.getMapPaths().convention(extension.getMapPaths());
         });
     }
 }
