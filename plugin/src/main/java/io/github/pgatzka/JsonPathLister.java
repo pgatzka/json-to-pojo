@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -111,17 +112,22 @@ public final class JsonPathLister {
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Invalid JSON: " + e.getOriginalMessage(), e);
         }
-        Map<String, Set<JsonType>> seen = new LinkedHashMap<>();
-        Set<String> matched = new HashSet<>();
-        visit(root, ROOT, seen, mapPaths, matched);
+        Walk walk = new Walk(mapPaths);
+        visit(root, ROOT, walk);
         for (String mapPath : mapPaths) {
-            if (!matched.contains(mapPath)) {
+            if (!walk.matched.contains(mapPath)) {
                 throw new IllegalArgumentException("Map path " + mapPath + " not found in the JSON document");
             }
         }
-        List<TypedJsonPath> result = new ArrayList<>(seen.size());
-        for (Map.Entry<String, Set<JsonType>> entry : seen.entrySet()) {
-            result.add(new TypedJsonPath(entry.getKey(), merge(entry.getKey(), entry.getValue())));
+        List<TypedJsonPath> result = new ArrayList<>(walk.seen.size());
+        for (Map.Entry<String, PathStats> entry : walk.seen.entrySet()) {
+            String path = entry.getKey();
+            PathStats stats = entry.getValue();
+            JsonType type = merge(path, stats.types);
+            // Only members can be missing; wildcard children have no parent path and are never optional.
+            boolean optional =
+                    stats.parentPath != null && walk.objectCounts.getOrDefault(stats.parentPath, 0) > stats.count;
+            result.add(new TypedJsonPath(path, type, stats.types.contains(JsonType.NULL), optional));
         }
         return List.copyOf(result);
     }
@@ -199,14 +205,45 @@ public final class JsonPathLister {
         return JsonType.NULL;
     }
 
-    private static void record(String path, JsonNode node, Map<String, Set<JsonType>> seen) {
-        seen.computeIfAbsent(path, p -> new LinkedHashSet<>()).add(typeOf(node));
+    /**
+     * Mutable state of one traversal: per-path statistics in first-occurrence order, object counts per path
+     * (including the root) and the map paths that matched a node.
+     */
+    private static final class Walk {
+        private final Map<String, PathStats> seen = new LinkedHashMap<>();
+        private final Map<String, Integer> objectCounts = new HashMap<>();
+        private final Set<String> matched = new HashSet<>();
+        private final Set<String> mapPaths;
+
+        private Walk(Set<String> mapPaths) {
+            this.mapPaths = mapPaths;
+        }
     }
 
-    private static void visit(
-            JsonNode node, String path, Map<String, Set<JsonType>> seen, Set<String> mapPaths, Set<String> matched) {
-        if (mapPaths.contains(path)) {
-            matched.add(path);
+    /** Merged facts about all nodes sharing one collapsed path. */
+    private static final class PathStats {
+        private final Set<JsonType> types = new LinkedHashSet<>();
+        // Null for wildcard children, whose absence is never reported as optional.
+        private final String parentPath;
+        private int count;
+
+        private PathStats(String parentPath) {
+            this.parentPath = parentPath;
+        }
+    }
+
+    private static void record(String path, String parentPath, JsonNode node, Walk walk) {
+        PathStats stats = walk.seen.computeIfAbsent(path, p -> new PathStats(parentPath));
+        stats.types.add(typeOf(node));
+        stats.count++;
+    }
+
+    private static void visit(JsonNode node, String path, Walk walk) {
+        if (node.isObject()) {
+            walk.objectCounts.merge(path, 1, Integer::sum);
+        }
+        if (walk.mapPaths.contains(path)) {
+            walk.matched.add(path);
             if (node.isNull()) {
                 return;
             }
@@ -217,21 +254,21 @@ public final class JsonPathLister {
             String childPath = path + MAP_WILDCARD;
             // All member values share one wildcard path, just like array elements.
             for (JsonNode value : node) {
-                record(childPath, value, seen);
-                visit(value, childPath, seen, mapPaths, matched);
+                record(childPath, null, value, walk);
+                visit(value, childPath, walk);
             }
         } else if (node.isObject()) {
             for (Map.Entry<String, JsonNode> field : node.properties()) {
                 String childPath = path + memberSegment(field.getKey());
-                record(childPath, field.getValue(), seen);
-                visit(field.getValue(), childPath, seen, mapPaths, matched);
+                record(childPath, path, field.getValue(), walk);
+                visit(field.getValue(), childPath, walk);
             }
         } else if (node.isArray()) {
             String childPath = path + ARRAY_WILDCARD;
             // All elements share one wildcard path; the map merges their sub-paths in first-occurrence order.
             for (JsonNode element : node) {
-                record(childPath, element, seen);
-                visit(element, childPath, seen, mapPaths, matched);
+                record(childPath, null, element, walk);
+                visit(element, childPath, walk);
             }
         }
     }

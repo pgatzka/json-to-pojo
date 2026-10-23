@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `TypedJsonPath` carries `nullable` (a `null` was seen at the path) and `optional` (a merged parent object lacks the
+  member) flags; `listJsonPaths` appends `(nullable)`, `(optional)` or `(nullable, optional)` to the line.
+  Spec: `docs/specs/nullable-optional-paths.md`.
 - Dependabot configuration: weekly grouped updates for GitHub Actions (`ci:` prefix) and Gradle dependencies
   (`build:` prefix). Spec: `docs/specs/dependabot.md`.
 - GitHub Actions workflow `CI`: on pushes to `main` and pull requests it runs `./gradlew check` on Temurin 25, runs the
@@ -42,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whenever a spec spells out the build-script change (plugin, toolchain or dependency), not only for a new dependency.
 - The `implementer` agent may also write CI configuration under `.github/**` when a spec spells it out; the
   `agent-guard` hook enforces this.
+- Workflow step 3: the orchestrator runs `./gradlew spotlessApply` after the test-writer, so the implementer's `check`
+  never fails on test formatting (whose failure output would show test lines).
 - Moved the scaffold plugin from package `org.example` to `io.github.pgatzka`; plugin id is now
   `io.github.pgatzka.json-pojo-gen` (was `org.example.greeting`). The `greeting` task is unchanged apart from the id it prints.
   Spec: `docs/specs/package-migration.md`.
