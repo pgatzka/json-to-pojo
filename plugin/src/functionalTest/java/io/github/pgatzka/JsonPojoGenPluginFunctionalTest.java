@@ -24,42 +24,6 @@ class JsonPojoGenPluginFunctionalTest {
     @TempDir
     Path projectDir;
 
-    private BuildResult runGreeting() throws IOException {
-        Files.writeString(projectDir.resolve("settings.gradle.kts"), "", StandardCharsets.UTF_8);
-        Files.writeString(projectDir.resolve("build.gradle.kts"),
-                "plugins {\n"
-                        + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
-                        + "}\n",
-                StandardCharsets.UTF_8);
-
-        return GradleRunner.create()
-                .forwardOutput()
-                .withPluginClasspath()
-                .withArguments("greeting")
-                .withProjectDir(projectDir.toFile())
-                .build();
-    }
-
-    @Test
-    @DisplayName("4: greeting task succeeds")
-    void greeting_finishesWithSuccess() throws IOException {
-        BuildResult result = runGreeting();
-
-        BuildTask task = result.task(":greeting");
-        assertThat(task).isNotNull();
-        assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-    }
-
-    @Test
-    @DisplayName("4: greeting task prints the hello line with the new plugin id")
-    void greeting_printsHelloLineWithNewPluginId() throws IOException {
-        BuildResult result = runGreeting();
-
-        assertThat(result.getOutput().lines())
-                .anyMatch(line -> line.strip().equals("Hello from plugin 'io.github.pgatzka.json-pojo-gen'"));
-        assertThat(result.getOutput()).doesNotContain("org.example.greeting");
-    }
-
     private static final String REFERENCE_DOCUMENT = """
             {
               "id": 1,
@@ -99,6 +63,46 @@ class JsonPojoGenPluginFunctionalTest {
             + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
             + "}\n";
 
+    private static final String MAP_REFERENCE_DOCUMENT = """
+            {
+              "id": 7,
+              "translations": {"en": {"text": "Hello", "plural": false}, "de": {"text": "Hallo"}},
+              "items": [{"sku": "s1", "attrs": {"color": "red"}}, {"sku": "s2", "attrs": {"size": 3}}],
+              "empty": {}
+            }
+            """;
+
+    private static final List<String> MAP_REFERENCE_PATHS = List.of(
+            "$.id",
+            "$.translations",
+            "$.translations.*",
+            "$.translations.*.text",
+            "$.translations.*.plural",
+            "$.items",
+            "$.items[*]",
+            "$.items[*].sku",
+            "$.items[*].attrs",
+            "$.items[*].attrs.*",
+            "$.empty");
+
+    /** Kotlin DSL: {@code \$} escapes the dollar sign inside a Kotlin string literal. */
+    private static final String MAP_PATHS_BUILD_SCRIPT = "plugins {\n"
+            + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
+            + "}\n"
+            + "jsonPojoGen {\n"
+            + "    inputFile.set(file(\"input.json\"))\n"
+            + "    mapPaths.add(\"\\$.translations\")\n"
+            + "    mapPaths.add(\"\\$.items[*].attrs\")\n"
+            + "}\n";
+
+    private static final String ARRAY_MAP_PATH_BUILD_SCRIPT = "plugins {\n"
+            + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
+            + "}\n"
+            + "jsonPojoGen {\n"
+            + "    inputFile.set(file(\"input.json\"))\n"
+            + "    mapPaths.add(\"\\$.items\")\n"
+            + "}\n";
+
     private void writeProject(String buildScript, String inputJson) throws IOException {
         Files.writeString(projectDir.resolve("settings.gradle.kts"), "", StandardCharsets.UTF_8);
         Files.writeString(projectDir.resolve("build.gradle.kts"), buildScript, StandardCharsets.UTF_8);
@@ -120,6 +124,21 @@ class JsonPojoGenPluginFunctionalTest {
                 .map(String::strip)
                 .filter(line -> line.startsWith("$"))
                 .toList();
+    }
+
+    @Test
+    @DisplayName("3: running the removed placeholder task fails with task not found")
+    void removedPlaceholderTask_failsWithTaskNotFound() throws IOException {
+        writeProject(UNCONFIGURED_BUILD_SCRIPT, null);
+
+        BuildResult result = GradleRunner.create()
+                .forwardOutput()
+                .withPluginClasspath()
+                .withArguments("greeting")
+                .withProjectDir(projectDir.toFile())
+                .buildAndFail();
+
+        assertThat(result.getOutput()).contains("Task 'greeting' not found");
     }
 
     @Test
@@ -180,5 +199,35 @@ class JsonPojoGenPluginFunctionalTest {
         assertThat(task).isNotNull();
         assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
         assertThat(dollarLines(result)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("map-paths 10: listJsonPaths with map paths succeeds and logs the 11 collapsed paths in order")
+    void listJsonPaths_withMapPaths_logsCollapsedPathsInOrder() throws IOException {
+        writeProject(MAP_PATHS_BUILD_SCRIPT, MAP_REFERENCE_DOCUMENT);
+
+        BuildResult result = listJsonPathsRunner().build();
+
+        BuildTask task = result.task(":listJsonPaths");
+        assertThat(task).isNotNull();
+        assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
+        List<String> strippedLines = result.getOutput().lines().map(String::strip).toList();
+        assertThat(strippedLines).containsSubsequence(MAP_REFERENCE_PATHS);
+        assertThat(dollarLines(result)).containsExactlyElementsOf(MAP_REFERENCE_PATHS);
+    }
+
+    @Test
+    @DisplayName("map-paths 11: listJsonPaths fails when a map path points to an array")
+    void listJsonPaths_mapPathToArray_fails() throws IOException {
+        writeProject(ARRAY_MAP_PATH_BUILD_SCRIPT, MAP_REFERENCE_DOCUMENT);
+
+        BuildResult result = listJsonPathsRunner().buildAndFail();
+
+        BuildTask task = result.task(":listJsonPaths");
+        assertThat(task).isNotNull();
+        assertThat(task.getOutcome()).isEqualTo(TaskOutcome.FAILED);
+        assertThat(result.getOutput())
+                .contains("Map path error for ")
+                .contains("does not point to a JSON object");
     }
 }

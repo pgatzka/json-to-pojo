@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `mapPaths` on the `jsonPojoGen` extension and the `listJsonPaths` task: objects at the given JSON paths are treated
+  as maps, their members collapsed to `.*` and merged like array elements. Unmatched paths or paths that do not point
+  to an object fail the build with `Map path error for <file>`. Spec: `docs/specs/map-paths.md`.
 - `jsonPojoGen` extension with an `inputFile` property and a `listJsonPaths` task that logs one JSON path per node of
   the input document (arrays collapsed to `[*]`, non-identifier keys in bracket notation). Jackson databind 2.22.4 is
   now an implementation dependency. Spec: `docs/specs/list-json-paths.md`.
@@ -26,3 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved the scaffold plugin from package `org.example` to `io.github.pgatzka`; plugin id is now
   `io.github.pgatzka.json-pojo-gen` (was `org.example.greeting`). The `greeting` task is unchanged apart from the id it prints.
   Spec: `docs/specs/package-migration.md`.
+
+### Removed
+
+- The scaffold `greeting` task and the `JsonPojoGenPlugin.GREETING_TASK_NAME` constant. Running `greeting` now fails with
+  "Task 'greeting' not found". Spec: `docs/specs/remove-greeting-task.md`.

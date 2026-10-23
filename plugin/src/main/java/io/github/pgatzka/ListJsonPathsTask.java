@@ -3,9 +3,12 @@ package io.github.pgatzka;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.provider.SetProperty;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -38,21 +41,35 @@ public abstract class ListJsonPathsTask extends DefaultTask {
     public abstract RegularFileProperty getInputFile();
 
     /**
-     * Reads {@code inputFile}, computes its JSON paths with {@link JsonPathLister#listPaths(java.nio.file.Path)}
+     * Returns the JSON paths of objects to treat as maps; defaults (via convention) to the extension's
+     * {@code mapPaths}.
+     *
+     * @return the map paths property; never null
+     */
+    @Input
+    public abstract SetProperty<String> getMapPaths();
+
+    /**
+     * Reads {@code inputFile}, computes its JSON paths with
+     * {@link JsonPathLister#listPaths(java.nio.file.Path, java.util.Set)} using {@code mapPaths},
      * and logs each path as its own lifecycle message.
      *
      * @throws IOException if the file cannot be read
-     * @throws GradleException if the file is not valid JSON; message starts with "Invalid JSON in " followed by
-     *         the file's absolute path; the IllegalArgumentException is the cause
+     * @throws GradleException if the file is not valid JSON (message starts with "Invalid JSON in " followed by
+     *         the file's absolute path), or if a map path is invalid, not found or does not point to an object
+     *         (message starts with "Map path error for " followed by the file's absolute path, then ": " and the
+     *         lister's message); in both cases the IllegalArgumentException is the cause
      */
     @TaskAction
     public void listPaths() throws IOException {
         File file = getInputFile().get().getAsFile();
+        Set<String> mapPaths = getMapPaths().getOrElse(Set.of());
         List<String> paths;
         try {
-            paths = JsonPathLister.listPaths(file.toPath());
+            paths = JsonPathLister.listPaths(file.toPath(), mapPaths);
         } catch (IllegalArgumentException e) {
-            throw new GradleException("Invalid JSON in " + file.getAbsolutePath() + ": " + e.getMessage(), e);
+            String prefix = JsonPathLister.isMapPathError(e) ? "Map path error for " : "Invalid JSON in ";
+            throw new GradleException(prefix + file.getAbsolutePath() + ": " + e.getMessage(), e);
         }
         for (String path : paths) {
             getLogger().lifecycle("{}", path);
