@@ -37,7 +37,7 @@ You write specs, delegate to agents, run the build, review results, update docs,
 | Agent | Reads | Writes | Must never see | Runs |
 |-------|-------|--------|----------------|------|
 | `test-writer` | `docs/specs/**`, `plugin/src/test/**`, `plugin/src/functionalTest/**`, `*.gradle.kts`, `gradle/libs.versions.toml` | `plugin/src/test/**`, `plugin/src/functionalTest/**` | `plugin/src/main/**` | nothing (no Gradle) |
-| `implementer` | `docs/specs/**`, `plugin/src/main/**`, `*.gradle.kts`, `gradle/libs.versions.toml`, Gradle output | `plugin/src/main/**`, build scripts only if the spec requires a dependency | `plugin/src/test/**`, `plugin/src/functionalTest/**` | `./gradlew test` / `functionalTest` / `check`, max 5 fix attempts |
+| `implementer` | `docs/specs/**`, `plugin/src/main/**`, `*.gradle.kts`, `gradle/libs.versions.toml`, Gradle output | `plugin/src/main/**`, build scripts (`settings.gradle.kts`, `plugin/build.gradle.kts`, `gradle/libs.versions.toml`) only when the spec spells out the change | `plugin/src/test/**`, `plugin/src/functionalTest/**` | `./gradlew test` / `functionalTest` / `check`, max 5 fix attempts |
 | `reviewer` | everything | nothing | — | `./gradlew test` / `check` |
 
 Isolation is enforced mechanically by `.claude/hooks/agent-guard.py` (a `PreToolUse` hook on `Read`, `Grep`, `Glob`, `Edit`,
