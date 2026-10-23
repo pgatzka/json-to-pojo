@@ -15,7 +15,7 @@ import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
 /**
- * Logs the JSON paths found in the configured input file, one per line, at lifecycle level.
+ * Logs the typed JSON paths found in the configured input file, one per line, at lifecycle level.
  */
 public abstract class ListJsonPathsTask extends DefaultTask {
 
@@ -52,26 +52,35 @@ public abstract class ListJsonPathsTask extends DefaultTask {
     /**
      * Reads {@code inputFile}, computes its JSON paths with
      * {@link JsonPathLister#listPaths(java.nio.file.Path, java.util.Set)} using {@code mapPaths},
-     * and logs each path as its own lifecycle message.
+     * and logs each typed path ({@code <path>: <type>}) as its own lifecycle message.
      *
      * @throws IOException if the file cannot be read
      * @throws GradleException if the file is not valid JSON (message starts with "Invalid JSON in " followed by
-     *         the file's absolute path), or if a map path is invalid, not found or does not point to an object
+     *         the file's absolute path), if a map path is invalid, not found or does not point to an object
      *         (message starts with "Map path error for " followed by the file's absolute path, then ": " and the
-     *         lister's message); in both cases the IllegalArgumentException is the cause
+     *         lister's message), or if a path has conflicting types (message starts with "Type conflict in "
+     *         followed by the file's absolute path, then ": " and the lister's message); in all cases the
+     *         IllegalArgumentException is the cause
      */
     @TaskAction
     public void listPaths() throws IOException {
         File file = getInputFile().get().getAsFile();
         Set<String> mapPaths = getMapPaths().getOrElse(Set.of());
-        List<String> paths;
+        List<TypedJsonPath> paths;
         try {
             paths = JsonPathLister.listPaths(file.toPath(), mapPaths);
         } catch (IllegalArgumentException e) {
-            String prefix = JsonPathLister.isMapPathError(e) ? "Map path error for " : "Invalid JSON in ";
+            String prefix;
+            if (JsonPathLister.isMapPathError(e)) {
+                prefix = "Map path error for ";
+            } else if (JsonPathLister.isTypeConflict(e)) {
+                prefix = "Type conflict in ";
+            } else {
+                prefix = "Invalid JSON in ";
+            }
             throw new GradleException(prefix + file.getAbsolutePath() + ": " + e.getMessage(), e);
         }
-        for (String path : paths) {
+        for (TypedJsonPath path : paths) {
             getLogger().lifecycle("{}", path);
         }
     }

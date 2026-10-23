@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Every listed path carries a type (`float`, `integer`, `string`, `boolean`, `object`, `array`, `null`) via the new
+  `JsonType` enum and `TypedJsonPath` record. Merged values merge their types: `null` loses, `integer` + `float` gives
+  `float`, other scalar mixes give `string`, and a container mixed with another type fails the build with
+  `Type conflict in <file>`. `listJsonPaths` now logs `<path>: <type>`; `JsonPathLister.listPaths` returns
+  `List<TypedJsonPath>`. Spec: `docs/specs/typed-json-paths.md`.
 - `mapPaths` on the `jsonPojoGen` extension and the `listJsonPaths` task: objects at the given JSON paths are treated
   as maps, their members collapsed to `.*` and merged like array elements. Unmatched paths or paths that do not point
   to an object fail the build with `Map path error for <file>`. Spec: `docs/specs/map-paths.md`.

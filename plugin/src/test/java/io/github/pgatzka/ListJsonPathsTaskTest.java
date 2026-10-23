@@ -266,4 +266,81 @@ class ListJsonPathsTaskTest {
                 .hasMessageContaining(input.getAbsolutePath())
                 .hasCauseInstanceOf(IllegalArgumentException.class);
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // typed-json-paths (docs/specs/typed-json-paths.md)
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("typed 11: mixed scalars merge to string and listPaths completes without exception")
+    void listPaths_mixedScalars_completesWithoutException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "[1,\"a\"]");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+
+        assertThatCode(task::listPaths).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("typed Edge: type conflict throws GradleException naming the file")
+    void listPaths_typeConflict_throwsGradleException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "[{\"a\":1},[1]]");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Type conflict in ")
+                .hasMessageContaining(input.getAbsolutePath())
+                .hasMessageContaining("Conflicting types at $[*]: object, array")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("typed Edge: type conflict message is file path, ': ', then the lister's message")
+    void listPaths_typeConflict_messageFormat() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "[{\"a\":1},[1]]");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Type conflict in " + input.getAbsolutePath()
+                        + ": Conflicting types at $[*]: object, array")
+                .cause()
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Conflicting types at $[*]: object, array");
+    }
+
+    @Test
+    @DisplayName("typed Edge: type conflict among map values throws Type conflict GradleException")
+    void listPaths_typeConflictWithMapPaths_throwsGradleException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "{\"m\":{\"a\":{\"x\":1},\"b\":[1]}}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.m"));
+
+        assertThatThrownBy(task::listPaths)
+                .isInstanceOf(GradleException.class)
+                .hasMessageStartingWith("Type conflict in ")
+                .hasMessageContaining(input.getAbsolutePath())
+                .hasMessageContaining("Conflicting types at $.m.*: object, array")
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("typed: map values merging to float complete without exception")
+    void listPaths_mapValuesMerge_completesWithoutException() throws IOException {
+        Project project = newProjectWithPlugin();
+        File input = writeFile("input.json", "{\"m\":{\"a\":1,\"b\":2.5,\"c\":null}}");
+        ListJsonPathsTask task = task(project);
+        task.getInputFile().set(input);
+        task.getMapPaths().set(Set.of("$.m"));
+
+        assertThatCode(task::listPaths).doesNotThrowAnyException();
+    }
 }

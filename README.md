@@ -24,27 +24,38 @@ jsonPojoGen {
 }
 ```
 
-`./gradlew listJsonPaths` then logs one JSON path per node in the document, in document order. Array elements are
-collapsed to `[*]` and merged, so for
+`./gradlew listJsonPaths` then logs one line per node in the document, in document order, as `<path>: <type>`.
+Array elements are collapsed to `[*]` and merged, so for
 
 ```json
-{"id": 1, "address": {"city": "Berlin"}, "items": [{"sku": "s1"}, {"sku": "s2", "qty": 2}]}
+{"id": 1, "address": {"city": "Berlin"}, "items": [{"sku": "s1", "qty": 2}, {"sku": "s2", "qty": 2.5}]}
 ```
 
 the task prints
 
 ```
-$.id
-$.address
-$.address.city
-$.items
-$.items[*]
-$.items[*].sku
-$.items[*].qty
+$.id: integer
+$.address: object
+$.address.city: string
+$.items: array
+$.items[*]: object
+$.items[*].sku: string
+$.items[*].qty: float
 ```
 
 Keys that are not plain identifiers use bracket notation, e.g. `$['first name']`. The build fails with
 `Invalid JSON in <file>` when the file does not parse.
+
+### Types
+
+Each path carries one of `float`, `integer`, `string`, `boolean`, `object`, `array` or `null`. Where values are merged
+(array elements, map values), the types are merged too:
+
+- `null` always loses to any other type.
+- `integer` and `float` together give `float`.
+- any other mix of scalars (`string`, `integer`, `float`, `boolean`) gives `string`.
+- `object` or `array` mixed with any other non-null type fails the build with
+  `Type conflict in <file>: Conflicting types at <path>: <types>`.
 
 ### Objects that are maps
 
@@ -60,8 +71,8 @@ jsonPojoGen {
 }
 ```
 
-For `{"translations": {"en": {"text": "Hello"}, "de": {"text": "Hallo"}}}` this prints `$.translations`,
-`$.translations.*` and `$.translations.*.text` instead of one entry per language. A map path must match a path the
+For `{"translations": {"en": {"text": "Hello"}, "de": {"text": "Hallo"}}}` this prints `$.translations: object`,
+`$.translations.*: object` and `$.translations.*.text: string` instead of one entry per language. A map path must match a path the
 task would otherwise print, and it must point to an object (or `null`); otherwise the build fails with
 `Map path error for <file>`.
 
