@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `io.github.pgatzka.codegen.PojoGenerator` with `GeneratorOptions` and `JavaFile`: turns a typed path list into
+  mutable Java POJOs, one top-level class per JSON object. `integer`/`float`/`boolean` map to `long`/`double`/`boolean`,
+  boxed when nullable or optional; arrays to `List<T>`, map paths to `Map<String, T>`, `null`-only paths to `Object`.
+  Class names derive from keys (singularized under `[*]`/`.*`) with per-path overrides; collisions, reserved names
+  (`java.lang` types, `List`, `Map`, …) and restricted identifiers fail. Keys that are not identifiers become camelCase
+  fields; whenever Jackson's getter-derived name differs from the key, getter and setter carry `@JsonProperty`.
+  Accessor collisions and a `Class` member are rejected. `equals`/`hashCode` and `toString` are each behind a flag.
+  Spec: `docs/specs/pojo-generator.md`.
 - `TypedJsonPath` carries `nullable` (a `null` was seen at the path) and `optional` (a merged parent object lacks the
   member) flags; `listJsonPaths` appends `(nullable)`, `(optional)` or `(nullable, optional)` to the line.
   Spec: `docs/specs/nullable-optional-paths.md`.
