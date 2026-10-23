@@ -108,4 +108,105 @@ class JsonPojoGenPluginTest {
         assertThat(project.getTasks().findByName("greeting")).isNotNull();
         assertThat(project.getTasks().getNames()).filteredOn("greeting"::equals).hasSize(1);
     }
+
+    @Test
+    @DisplayName("list-json-paths 9: extension NAME is 'jsonPojoGen'")
+    void extensionName_isJsonPojoGen() {
+        assertThat(JsonPojoGenExtension.NAME).isEqualTo("jsonPojoGen");
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: applying by id registers the jsonPojoGen extension")
+    void applyById_registersJsonPojoGenExtension() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        assertThat(project.getExtensions().getByName("jsonPojoGen")).isInstanceOf(JsonPojoGenExtension.class);
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: applying by class registers the jsonPojoGen extension")
+    void applyByClass_registersJsonPojoGenExtension() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+
+        assertThat(project.getExtensions().getByName("jsonPojoGen")).isInstanceOf(JsonPojoGenExtension.class);
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: extension inputFile has no default value")
+    void applyByClass_extensionInputFileHasNoDefault() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+
+        JsonPojoGenExtension extension = project.getExtensions().getByType(JsonPojoGenExtension.class);
+        assertThat(extension.getInputFile()).isNotNull();
+        assertThat(extension.getInputFile().isPresent()).isFalse();
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: applying by id registers the listJsonPaths task")
+    void applyById_registersListJsonPathsTask() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        assertThat(project.getTasks().findByName("listJsonPaths")).isInstanceOf(ListJsonPathsTask.class);
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: applying by class registers the listJsonPaths task")
+    void applyByClass_registersListJsonPathsTask() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+
+        assertThat(project.getTasks().findByName("listJsonPaths")).isInstanceOf(ListJsonPathsTask.class);
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: listJsonPaths task has group json-pojo-gen")
+    void applyByClass_listJsonPathsTaskHasGroup() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+
+        assertThat(project.getTasks().getByName("listJsonPaths").getGroup()).isEqualTo("json-pojo-gen");
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: listJsonPaths task has the specified description")
+    void applyByClass_listJsonPathsTaskHasDescription() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+
+        assertThat(project.getTasks().getByName("listJsonPaths").getDescription())
+                .isEqualTo("Logs the JSON paths found in the configured input file.");
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: greeting task is still registered alongside listJsonPaths")
+    void applyById_registersBothGreetingAndListJsonPaths() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+
+        assertThat(project.getTasks().findByName("greeting")).isNotNull();
+        assertThat(project.getTasks().findByName("listJsonPaths")).isNotNull();
+    }
+
+    @Test
+    @DisplayName("list-json-paths 9: applying twice leaves exactly one listJsonPaths task")
+    void applyTwice_leavesExactlyOneListJsonPathsTask() {
+        Project project = ProjectBuilder.builder().build();
+
+        project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
+        project.getPlugins().apply(JsonPojoGenPlugin.class);
+
+        assertThat(project.getTasks().getNames()).filteredOn("listJsonPaths"::equals).hasSize(1);
+    }
 }

@@ -22,6 +22,7 @@ java {
 }
 
 dependencies {
+    implementation(libs.jackson.databind)
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)
     // Use AssertJ for fluent assertions.
