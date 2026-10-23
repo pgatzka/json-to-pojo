@@ -24,42 +24,6 @@ class JsonPojoGenPluginFunctionalTest {
     @TempDir
     Path projectDir;
 
-    private BuildResult runGreeting() throws IOException {
-        Files.writeString(projectDir.resolve("settings.gradle.kts"), "", StandardCharsets.UTF_8);
-        Files.writeString(projectDir.resolve("build.gradle.kts"),
-                "plugins {\n"
-                        + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
-                        + "}\n",
-                StandardCharsets.UTF_8);
-
-        return GradleRunner.create()
-                .forwardOutput()
-                .withPluginClasspath()
-                .withArguments("greeting")
-                .withProjectDir(projectDir.toFile())
-                .build();
-    }
-
-    @Test
-    @DisplayName("4: greeting task succeeds")
-    void greeting_finishesWithSuccess() throws IOException {
-        BuildResult result = runGreeting();
-
-        BuildTask task = result.task(":greeting");
-        assertThat(task).isNotNull();
-        assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-    }
-
-    @Test
-    @DisplayName("4: greeting task prints the hello line with the new plugin id")
-    void greeting_printsHelloLineWithNewPluginId() throws IOException {
-        BuildResult result = runGreeting();
-
-        assertThat(result.getOutput().lines())
-                .anyMatch(line -> line.strip().equals("Hello from plugin 'io.github.pgatzka.json-pojo-gen'"));
-        assertThat(result.getOutput()).doesNotContain("org.example.greeting");
-    }
-
     private static final String REFERENCE_DOCUMENT = """
             {
               "id": 1,
@@ -120,6 +84,21 @@ class JsonPojoGenPluginFunctionalTest {
                 .map(String::strip)
                 .filter(line -> line.startsWith("$"))
                 .toList();
+    }
+
+    @Test
+    @DisplayName("3: running the removed placeholder task fails with task not found")
+    void removedPlaceholderTask_failsWithTaskNotFound() throws IOException {
+        writeProject(UNCONFIGURED_BUILD_SCRIPT, null);
+
+        BuildResult result = GradleRunner.create()
+                .forwardOutput()
+                .withPluginClasspath()
+                .withArguments("greeting")
+                .withProjectDir(projectDir.toFile())
+                .buildAndFail();
+
+        assertThat(result.getOutput()).contains("Task 'greeting' not found");
     }
 
     @Test

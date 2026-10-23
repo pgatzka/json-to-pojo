@@ -26,3 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved the scaffold plugin from package `org.example` to `io.github.pgatzka`; plugin id is now
   `io.github.pgatzka.json-pojo-gen` (was `org.example.greeting`). The `greeting` task is unchanged apart from the id it prints.
   Spec: `docs/specs/package-migration.md`.
+
+### Removed
+
+- The scaffold `greeting` task and the `JsonPojoGenPlugin.GREETING_TASK_NAME` constant. Running `greeting` now fails with
+  "Task 'greeting' not found". Spec: `docs/specs/remove-greeting-task.md`.
