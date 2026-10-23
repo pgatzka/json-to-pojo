@@ -13,10 +13,12 @@ import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 /**
  * Logs the typed JSON paths found in the configured input file, one per line, at lifecycle level.
  */
+@DisableCachingByDefault(because = "Only logs paths and declares no outputs; nothing to cache")
 public abstract class ListJsonPathsTask extends DefaultTask {
 
     /** Name under which the plugin registers this task. Value: "listJsonPaths". Never null. */
@@ -28,8 +30,7 @@ public abstract class ListJsonPathsTask extends DefaultTask {
     /**
      * Creates the task; Gradle instantiates it as a managed object.
      */
-    public ListJsonPathsTask() {
-    }
+    public ListJsonPathsTask() {}
 
     /**
      * Returns the JSON file to read; defaults (via convention) to the extension's {@code inputFile}.

@@ -81,11 +81,19 @@ task would otherwise print, and it must point to an object (or `null`); otherwis
 ```sh
 ./gradlew test                      # unit tests (plugin/src/test)
 ./gradlew functionalTest            # Gradle TestKit tests (plugin/src/functionalTest)
-./gradlew check                     # both
+./gradlew check                     # both, plus spotlessCheck and the JaCoCo report
 ./gradlew test --tests 'io.github.pgatzka.SomeTest'
+./gradlew spotlessApply             # format Java sources (Palantir Java Format)
+./gradlew publishToMavenLocal       # install io.github.pgatzka:json-pojo-gen into ~/.m2
 ```
 
 Tests use JUnit Jupiter and AssertJ. Base package: `io.github.pgatzka`. Plugin id: `io.github.pgatzka.json-pojo-gen`.
+
+Formatting is enforced by Spotless with Palantir Java Format; `check` fails on unformatted code, `spotlessApply` fixes
+it. Coverage is written to `plugin/build/reports/jacoco/test/jacocoTestReport.xml` after `test`. `./gradlew sonar`
+sends an analysis to SonarCloud (organization `pgatzka`, project `pgatzka_json-to-pojo`) and needs `SONAR_TOKEN` in
+the environment. `./gradlew publish` pushes the plugin and its marker to GitHub Packages and needs `GITHUB_ACTOR` and
+`GITHUB_TOKEN`.
 
 ## Project layout
 

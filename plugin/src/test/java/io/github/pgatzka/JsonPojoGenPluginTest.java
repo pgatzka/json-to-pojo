@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
-
 import org.gradle.api.Project;
 import org.gradle.api.plugins.UnknownPluginException;
 import org.gradle.testfixtures.ProjectBuilder;
@@ -130,7 +129,9 @@ class JsonPojoGenPluginTest {
         project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
         project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
 
-        assertThat(project.getTasks().getNames()).filteredOn("listJsonPaths"::equals).hasSize(1);
+        assertThat(project.getTasks().getNames())
+                .filteredOn("listJsonPaths"::equals)
+                .hasSize(1);
         assertThat(project.getTasks().findByName("greeting")).isNull();
     }
 
@@ -142,7 +143,9 @@ class JsonPojoGenPluginTest {
         project.getPlugins().apply("io.github.pgatzka.json-pojo-gen");
         project.getPlugins().apply(JsonPojoGenPlugin.class);
 
-        assertThat(project.getTasks().getNames()).filteredOn("listJsonPaths"::equals).hasSize(1);
+        assertThat(project.getTasks().getNames())
+                .filteredOn("listJsonPaths"::equals)
+                .hasSize(1);
         assertThat(project.getTasks().findByName("greeting")).isNull();
     }
 
@@ -240,7 +243,9 @@ class JsonPojoGenPluginTest {
     }
 
     private static ListJsonPathsTask listJsonPathsTaskOf(Project project) {
-        return project.getTasks().named(ListJsonPathsTask.NAME, ListJsonPathsTask.class).get();
+        return project.getTasks()
+                .named(ListJsonPathsTask.NAME, ListJsonPathsTask.class)
+                .get();
     }
 
     @Test

@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.BuildTask;
 import org.gradle.testkit.runner.GradleRunner;
@@ -93,9 +92,8 @@ class JsonPojoGenPluginFunctionalTest {
             + "    inputFile.set(file(\"input.json\"))\n"
             + "}\n";
 
-    private static final String UNCONFIGURED_BUILD_SCRIPT = "plugins {\n"
-            + "    id(\"io.github.pgatzka.json-pojo-gen\")\n"
-            + "}\n";
+    private static final String UNCONFIGURED_BUILD_SCRIPT =
+            "plugins {\n" + "    id(\"io.github.pgatzka.json-pojo-gen\")\n" + "}\n";
 
     private static final String MAP_REFERENCE_DOCUMENT = """
             {
@@ -155,7 +153,8 @@ class JsonPojoGenPluginFunctionalTest {
     }
 
     private static List<String> dollarLines(BuildResult result) {
-        return result.getOutput().lines()
+        return result.getOutput()
+                .lines()
                 .map(String::strip)
                 .filter(line -> line.startsWith("$"))
                 .toList();
@@ -195,13 +194,15 @@ class JsonPojoGenPluginFunctionalTest {
 
         BuildResult result = listJsonPathsRunner().build();
 
-        List<String> strippedLines = result.getOutput().lines().map(String::strip).toList();
+        List<String> strippedLines =
+                result.getOutput().lines().map(String::strip).toList();
         assertThat(strippedLines).containsSubsequence(REFERENCE_LINES);
         assertThat(dollarLines(result)).containsExactlyElementsOf(REFERENCE_LINES);
     }
 
     @Test
-    @DisplayName("typed 9: listJsonPaths on the typed reference succeeds and logs the 17 '<path>: <type>' lines in order")
+    @DisplayName(
+            "typed 9: listJsonPaths on the typed reference succeeds and logs the 17 '<path>: <type>' lines in order")
     void listJsonPaths_typedReferenceDocument_logsTypedLinesInOrder() throws IOException {
         writeProject(CONFIGURED_BUILD_SCRIPT, TYPED_REFERENCE_DOCUMENT);
 
@@ -210,7 +211,8 @@ class JsonPojoGenPluginFunctionalTest {
         BuildTask task = result.task(":listJsonPaths");
         assertThat(task).isNotNull();
         assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-        List<String> strippedLines = result.getOutput().lines().map(String::strip).toList();
+        List<String> strippedLines =
+                result.getOutput().lines().map(String::strip).toList();
         assertThat(strippedLines).containsSubsequence(TYPED_REFERENCE_LINES);
         assertThat(dollarLines(result)).containsExactlyElementsOf(TYPED_REFERENCE_LINES);
     }
@@ -276,7 +278,8 @@ class JsonPojoGenPluginFunctionalTest {
         BuildTask task = result.task(":listJsonPaths");
         assertThat(task).isNotNull();
         assertThat(task.getOutcome()).isEqualTo(TaskOutcome.SUCCESS);
-        List<String> strippedLines = result.getOutput().lines().map(String::strip).toList();
+        List<String> strippedLines =
+                result.getOutput().lines().map(String::strip).toList();
         assertThat(strippedLines).containsSubsequence(MAP_REFERENCE_LINES);
         assertThat(dollarLines(result)).containsExactlyElementsOf(MAP_REFERENCE_LINES);
     }
@@ -291,8 +294,6 @@ class JsonPojoGenPluginFunctionalTest {
         BuildTask task = result.task(":listJsonPaths");
         assertThat(task).isNotNull();
         assertThat(task.getOutcome()).isEqualTo(TaskOutcome.FAILED);
-        assertThat(result.getOutput())
-                .contains("Map path error for ")
-                .contains("does not point to a JSON object");
+        assertThat(result.getOutput()).contains("Map path error for ").contains("does not point to a JSON object");
     }
 }
