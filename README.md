@@ -4,7 +4,10 @@ A Gradle plugin that generates Java POJOs from JSON. Built with Java 25 and Grad
 
 ## Requirements
 
-- JDK 25 on `JAVA_HOME`
+- A JDK 17 or newer on `JAVA_HOME` to launch Gradle. The build declares a Java 25 toolchain; if no JDK 25 is installed,
+  Gradle downloads one automatically through the
+  [foojay toolchain resolver](https://github.com/gradle/foojay-toolchains) (needs network access to `api.foojay.io`
+  and the vendor's download host, e.g. `github.com` for Temurin).
 - Always use the wrapper: `./gradlew` (or `gradlew.bat` on Windows). Never a system Gradle.
 
 ## Build and test

@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Spec-first TDD orchestrator setup for Claude Code: `CLAUDE.md`, `test-writer`, `implementer`
   and `reviewer` agents, path-isolation hooks, and `docs/specs/SPEC_TEMPLATE.md`.
 - AssertJ 3.27.3 as a test dependency.
+- Java 25 toolchain declaration for the `plugin` subproject and the `org.gradle.toolchains.foojay-resolver-convention`
+  1.0.0 settings plugin, so Gradle provisions a JDK 25 automatically when none is installed locally.
+  Spec: `docs/specs/java-toolchain-foojay.md`.
 
 ### Changed
 
