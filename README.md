@@ -1,5 +1,7 @@
 # json-pojo-gen
 
+[![CI](https://github.com/pgatzka/json-to-pojo/actions/workflows/ci.yml/badge.svg)](https://github.com/pgatzka/json-to-pojo/actions/workflows/ci.yml)
+
 A Gradle plugin that generates Java POJOs from JSON. Built with Java 25 and Gradle 9.8.2 (Kotlin DSL).
 
 ## Requirements
@@ -94,6 +96,17 @@ it. Coverage is written to `plugin/build/reports/jacoco/test/jacocoTestReport.xm
 sends an analysis to SonarCloud (organization `pgatzka`, project `pgatzka_json-to-pojo`) and needs `SONAR_TOKEN` in
 the environment. `./gradlew publish` pushes the plugin and its marker to GitHub Packages and needs `GITHUB_ACTOR` and
 `GITHUB_TOKEN`.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and on every pull request:
+
+1. `./gradlew check` on Temurin 25: unit and functional tests, Spotless formatting check, JaCoCo report.
+2. `./gradlew sonar`, only when the `SONAR_TOKEN` repository secret is set (create the project
+   `pgatzka_json-to-pojo` in SonarCloud organization `pgatzka` and add the token as a secret).
+3. On pushes to `main` only: `./gradlew publish` to GitHub Packages, using the workflow's own `GITHUB_TOKEN`.
+
+Test and coverage reports are uploaded as a workflow artifact when the build fails.
 
 ## Project layout
 

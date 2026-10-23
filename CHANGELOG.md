@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub Actions workflow `CI`: on pushes to `main` and pull requests it runs `./gradlew check` on Temurin 25, runs the
+  Sonar analysis when `SONAR_TOKEN` is configured, uploads reports on failure, and on `main` publishes the snapshot to
+  GitHub Packages. Spec: `docs/specs/github-actions-ci.md`.
 - Build tooling: Spotless (Palantir Java Format) formatting check as part of `check`, JaCoCo XML coverage report,
   `org.sonarqube` plugin targeting SonarCloud (`pgatzka_json-to-pojo`), and `maven-publish` to GitHub Packages as
   `io.github.pgatzka:json-pojo-gen:0.1.0-SNAPSHOT` with a sources jar. `ListJsonPathsTask` is annotated
