@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Dependabot configuration: weekly grouped updates for GitHub Actions (`ci:` prefix) and Gradle dependencies
+  (`build:` prefix). Spec: `docs/specs/dependabot.md`.
 - GitHub Actions workflow `CI`: on pushes to `main` and pull requests it runs `./gradlew check` on Temurin 25, runs the
   Sonar analysis when `SONAR_TOKEN` is configured, uploads reports on failure, and on `main` publishes the snapshot to
   GitHub Packages. Spec: `docs/specs/github-actions-ci.md`.

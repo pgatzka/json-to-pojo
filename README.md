@@ -108,6 +108,10 @@ the environment. `./gradlew publish` pushes the plugin and its marker to GitHub 
 
 Test and coverage reports are uploaded as a workflow artifact when the build fails.
 
+Dependabot (`.github/dependabot.yml`) opens one grouped pull request per week for the workflow actions and one for the
+Gradle plugins and libraries. It does not update the Gradle wrapper; bump that by hand with
+`./gradlew wrapper --gradle-version <version>`.
+
 ## Project layout
 
 ```
